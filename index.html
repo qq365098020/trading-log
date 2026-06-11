@@ -267,36 +267,37 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
 .trade-card-pnl.profit{color:var(--red)}
 .trade-card-pnl.loss{color:var(--green)}
 
-/* Modal — animated center-expand glass */
+/* Modal — bottom-sheet slide-up glass */
 .modal-overlay{
   position:fixed;top:0;left:0;right:0;bottom:0;
   background:oklch(0 0 0 / 0.3);
-  backdrop-filter:blur(4px);
   -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
   z-index:200;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:flex-end;justify-content:center;
   opacity:0;visibility:hidden;pointer-events:none;
   overscroll-behavior:none;touch-action:none;
-  transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0.4s
+  transition:opacity 0.5s cubic-bezier(0.32,0.72,0,1),visibility 0s 0.5s
 }
 .modal-overlay.show{
   opacity:1;visibility:visible;pointer-events:auto;
-  transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0s
+  transition:opacity 0.5s cubic-bezier(0.32,0.72,0,1),visibility 0s 0s
 }
 .modal{
   background:var(--glass-thick);
-  backdrop-filter:var(--blur);
   -webkit-backdrop-filter:var(--blur);
+  backdrop-filter:var(--blur);
   border:1px solid var(--glass-border);
-  border-radius:var(--radius-lg);
-  width:92%;max-width:420px;max-height:80vh;overflow-y:auto;padding:0;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  width:100%;max-width:420px;max-height:80vh;overflow-y:auto;padding:0;
   box-shadow:var(--shadow-lg),inset 0 1px 0 oklch(1 0 0 / 0.4);
-  transform:scale(0.92);opacity:0;
-  transition:transform 0.4s cubic-bezier(0.25,0.1,0.25,1),opacity 0.4s cubic-bezier(0.25,0.1,0.25,1);
-  margin:auto
+  transform:translateY(100%);
+  transition:transform 0.5s cubic-bezier(0.32,0.72,0,1);
+  border-bottom:none;
+  margin:0 auto
 }
 .modal-overlay.show .modal{
-  transform:scale(1);opacity:1
+  transform:translateY(0)
 }
 .modal-handle{display:none}
 .modal-header{
@@ -456,6 +457,103 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:oklch(0 0 0 / 0.15);border-radius:2px}
 
+/* iOS-style Picker — bottom sheet */
+.picker-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:oklch(0 0 0 / 0.3);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+  z-index:250;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;visibility:hidden;pointer-events:none;
+  overscroll-behavior:none;touch-action:none;
+  transition:opacity 0.5s cubic-bezier(0.32,0.72,0,1),visibility 0s 0.5s
+}
+.picker-overlay.show{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity 0.5s cubic-bezier(0.32,0.72,0,1),visibility 0s 0s
+}
+.picker-sheet{
+  background:var(--glass-thick);
+  -webkit-backdrop-filter:var(--blur);
+  backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  width:100%;max-width:420px;
+  transform:translateY(100%);
+  transition:transform 0.5s cubic-bezier(0.32,0.72,0,1);
+  border-bottom:none;
+  box-shadow:0 -4px 24px oklch(0 0 0 / 0.12);
+  padding-bottom:4px
+}
+.picker-overlay.show .picker-sheet{
+  transform:translateY(0)
+}
+.picker-toolbar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0.75rem 1rem;
+  border-bottom:1px solid var(--border-subtle)
+}
+.picker-toolbar-title{
+  font-size:0.875rem;font-weight:600;color:var(--text-secondary)
+}
+.picker-toolbar-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:0.9375rem;font-weight:500;
+  padding:0.5rem 0.75rem;
+  min-width:2.75rem;min-height:2.75rem;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);
+  transition:background 0.2s
+}
+.picker-toolbar-btn:active{background:var(--border-subtle)}
+.picker-toolbar-btn.done{color:var(--accent);font-weight:600}
+.picker-columns{
+  display:flex;justify-content:center;
+  padding:0 0.5rem;
+  position:relative;
+  height:200px
+}
+.picker-column{
+  flex:1;position:relative;
+  overflow:hidden;
+  -webkit-user-select:none;user-select:none
+}
+.picker-column-inner{
+  position:absolute;width:100%;
+  will-change:transform
+}
+.picker-item{
+  height:40px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.0625rem;color:var(--text-secondary);
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+  transition:color 0.2s,opacity 0.2s;
+  white-space:nowrap;
+  padding:0 0.25rem
+}
+.picker-item.active{
+  color:var(--text-primary);font-weight:600;font-size:1.125rem
+}
+.picker-highlight{
+  position:absolute;top:50%;left:0.5rem;right:0.5rem;
+  height:40px;
+  transform:translateY(-50%);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  pointer-events:none;
+  z-index:1
+}
+.picker-label{
+  position:absolute;right:0.5rem;top:50%;
+  transform:translateY(-50%);
+  font-size:0.8125rem;color:var(--text-muted);font-weight:500;
+  pointer-events:none;z-index:2;
+  padding-left:0.5rem
+}
+/* Body scroll lock */
+html.picker-open,body.picker-open{overflow:hidden;position:fixed;width:100%;height:100%;overscroll-behavior:none;touch-action:pan-y pinch-zoom}
+
 /* Animations */
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -594,8 +692,8 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
         <div class="phase-section active" id="phase1">
           <div class="section-title">📋 基础信息</div>
           <div class="form-row-date">
-            <div class="form-group"><label class="form-label">日期</label><input type="text" id="fDate" placeholder="2026-06-10" inputmode="numeric" required></div>
-            <div class="form-group"><label class="form-label">开仓时间</label><input type="text" id="fOpenTime" placeholder="14:30" inputmode="numeric" required></div>
+            <div class="form-group"><label class="form-label">日期</label><input type="text" id="fDate" placeholder="2026-06-10" inputmode="none" readonly required onclick="openDatePicker()" style="cursor:pointer"></div>
+            <div class="form-group"><label class="form-label">开仓时间</label><input type="text" id="fOpenTime" placeholder="14:30" inputmode="none" readonly required onclick="openTimePicker()" style="cursor:pointer"></div>
           </div>
           <div class="form-group"><label class="form-label">品种名称</label><input type="text" id="fSymbol" placeholder="甲醇、螺纹钢..." required></div>
           <div class="form-group"><label class="form-label">方向</label>
@@ -686,6 +784,44 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src=""></div>
+
+<!-- iOS Date Picker -->
+<div class="picker-overlay" id="datePickerOverlay">
+  <div class="picker-sheet">
+    <div class="picker-toolbar">
+      <button class="picker-toolbar-btn" onclick="closeDatePicker()">取消</button>
+      <span class="picker-toolbar-title">选择日期</span>
+      <button class="picker-toolbar-btn done" onclick="confirmDatePicker()">完成</button>
+    </div>
+    <div class="picker-columns" id="datePickerColumns">
+      <div class="picker-column" id="dpYearColumn"><div class="picker-column-inner" id="dpYearInner"></div></div>
+      <div class="picker-label">年</div>
+      <div class="picker-column" id="dpMonthColumn"><div class="picker-column-inner" id="dpMonthInner"></div></div>
+      <div class="picker-label">月</div>
+      <div class="picker-column" id="dpDayColumn"><div class="picker-column-inner" id="dpDayInner"></div></div>
+      <div class="picker-label">日</div>
+      <div class="picker-highlight"></div>
+    </div>
+  </div>
+</div>
+
+<!-- iOS Time Picker -->
+<div class="picker-overlay" id="timePickerOverlay">
+  <div class="picker-sheet">
+    <div class="picker-toolbar">
+      <button class="picker-toolbar-btn" onclick="closeTimePicker()">取消</button>
+      <span class="picker-toolbar-title">选择时间</span>
+      <button class="picker-toolbar-btn done" onclick="confirmTimePicker()">完成</button>
+    </div>
+    <div class="picker-columns" id="timePickerColumns">
+      <div class="picker-column" id="tpHourColumn"><div class="picker-column-inner" id="tpHourInner"></div></div>
+      <div class="picker-label">时</div>
+      <div class="picker-column" id="tpMinuteColumn"><div class="picker-column-inner" id="tpMinuteInner"></div></div>
+      <div class="picker-label">分</div>
+      <div class="picker-highlight"></div>
+    </div>
+  </div>
+</div>
 
 <!-- FAB -->
 <div class="fab" id="fab" onclick="showAddPage()">＋</div>
@@ -1642,6 +1778,325 @@ setInterval(async () => {
     refreshAll();
   }
 }, SYNC_CHECK_INTERVAL);
+
+// ===================================================================
+//  iOS-style Scroll Picker Engine
+// ===================================================================
+const PICKER_ITEM_HEIGHT = 40;
+const PICKER_VISIBLE_COUNT = 5;
+
+function createScrollPicker(columnEl, innerEl, items, selectedIndex) {
+  var itemCount = items.length;
+  var padTop = Math.floor(PICKER_VISIBLE_COUNT / 2) * PICKER_ITEM_HEIGHT;
+  var totalHeight = itemCount * PICKER_ITEM_HEIGHT;
+
+  innerEl.innerHTML = items.map(function(item, i) {
+    return '<div class="picker-item' + (i === selectedIndex ? ' active' : '') + '">' + item + '</div>';
+  }).join('');
+
+  var currentOffset = -selectedIndex * PICKER_ITEM_HEIGHT;
+  innerEl.style.transform = 'translateY(' + (padTop + currentOffset) + 'px)';
+
+  var state = {
+    offset: currentOffset,
+    velocity: 0,
+    lastY: 0,
+    lastTime: 0,
+    startY: 0,
+    startOffset: 0,
+    animFrame: null,
+    targetOffset: null,
+    selectedIndex: selectedIndex
+  };
+
+  function clampOffset(off) {
+    var maxOffset = 0;
+    var minOffset = -(itemCount - 1) * PICKER_ITEM_HEIGHT;
+    if (off > maxOffset) return maxOffset;
+    if (off < minOffset) return minOffset;
+    return off;
+  }
+
+  function snapToIndex(idx) {
+    idx = Math.max(0, Math.min(itemCount - 1, idx));
+    state.selectedIndex = idx;
+    state.targetOffset = -idx * PICKER_ITEM_HEIGHT;
+    var targetOffset = state.targetOffset;
+    var startOffset = state.offset;
+    var startTime = performance.now();
+    var duration = 300;
+
+    if (state.animFrame) cancelAnimationFrame(state.animFrame);
+
+    function animate(now) {
+      var elapsed = now - startTime;
+      var t = Math.min(elapsed / duration, 1);
+      // iOS ease-out
+      var ease = 1 - Math.pow(1 - t, 3);
+      state.offset = startOffset + (targetOffset - startOffset) * ease;
+      innerEl.style.transform = 'translateY(' + (padTop + state.offset) + 'px)';
+      updateActiveItem();
+      if (t < 1) {
+        state.animFrame = requestAnimationFrame(animate);
+      }
+    }
+    state.animFrame = requestAnimationFrame(animate);
+  }
+
+  function updateActiveItem() {
+    var idx = Math.round(-state.offset / PICKER_ITEM_HEIGHT);
+    idx = Math.max(0, Math.min(itemCount - 1, idx));
+    if (idx !== state.selectedIndex) {
+      state.selectedIndex = idx;
+      var allItems = innerEl.querySelectorAll('.picker-item');
+      allItems.forEach(function(el, i) {
+        if (i === idx) {
+          if (!el.classList.contains('active')) el.classList.add('active');
+        } else {
+          el.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    if (state.animFrame) cancelAnimationFrame(state.animFrame);
+    var touch = e.touches ? e.touches[0] : e;
+    state.startY = touch.clientY;
+    state.startOffset = state.offset;
+    state.velocity = 0;
+    state.lastY = touch.clientY;
+    state.lastTime = performance.now();
+    state.targetOffset = null;
+  }
+
+  function onPointerMove(e) {
+    if (state.targetOffset !== null) return;
+    e.preventDefault();
+    var touch = e.touches ? e.touches[0] : e;
+    var now = performance.now();
+    var dy = touch.clientY - state.startY;
+    var dt = now - state.lastTime;
+    if (dt > 0) {
+      state.velocity = (touch.clientY - state.lastY) / dt;
+    }
+    state.lastY = touch.clientY;
+    state.lastTime = now;
+    state.offset = clampOffset(state.startOffset + dy);
+    innerEl.style.transform = 'translateY(' + (padTop + state.offset) + 'px)';
+    updateActiveItem();
+  }
+
+  function onPointerUp(e) {
+    if (state.targetOffset !== null) return;
+    // Apply momentum
+    var v = state.velocity * 16; // per frame approx
+    var momentumOffset = state.offset + v * 8;
+    momentumOffset = clampOffset(momentumOffset);
+    var targetIdx = Math.round(-momentumOffset / PICKER_ITEM_HEIGHT);
+    targetIdx = Math.max(0, Math.min(itemCount - 1, targetIdx));
+    snapToIndex(targetIdx);
+  }
+
+  columnEl.addEventListener('touchstart', onPointerDown, { passive: false });
+  columnEl.addEventListener('touchmove', onPointerMove, { passive: false });
+  columnEl.addEventListener('touchend', onPointerUp, { passive: true });
+  columnEl.addEventListener('mousedown', function(e) {
+    function onMM(ev) { onPointerMove(ev); }
+    function onMU(ev) {
+      onPointerUp(ev);
+      document.removeEventListener('mousemove', onMM);
+      document.removeEventListener('mouseup', onMU);
+    }
+    onPointerDown(e);
+    document.addEventListener('mousemove', onMM);
+    document.addEventListener('mouseup', onMU);
+  });
+
+  return {
+    getState: function() { return state; },
+    setSelectedIndex: function(idx) { snapToIndex(idx); }
+  };
+}
+
+// ===================================================================
+//  Date Picker
+// ===================================================================
+var datePickerData = { picker: null, year: null, month: null, day: null };
+var dpYearPicker = null, dpMonthPicker = null, dpDayPicker = null;
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+function openDatePicker() {
+  var val = document.getElementById('fDate').value;
+  var now = new Date();
+  var y, m, d;
+  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    var parts = val.split('-');
+    y = parseInt(parts[0]);
+    m = parseInt(parts[1]);
+    d = parseInt(parts[2]);
+  } else {
+    y = now.getFullYear();
+    m = now.getMonth() + 1;
+    d = now.getDate();
+  }
+  datePickerData = { year: y, month: m, day: d };
+
+  // Generate year items (current year - 5 to current year + 5)
+  var currentYear = now.getFullYear();
+  var years = [];
+  for (var i = currentYear - 5; i <= currentYear + 5; i++) {
+    years.push(i.toString());
+  }
+  var yearIdx = years.indexOf(y.toString());
+  if (yearIdx < 0) yearIdx = 5;
+  dpYearPicker = createScrollPicker(
+    document.getElementById('dpYearColumn'),
+    document.getElementById('dpYearInner'),
+    years, yearIdx
+  );
+
+  // Generate month items
+  var months = [];
+  for (var j = 1; j <= 12; j++) {
+    months.push(j < 10 ? '0' + j : '' + j);
+  }
+  var monthIdx = m - 1;
+  dpMonthPicker = createScrollPicker(
+    document.getElementById('dpMonthColumn'),
+    document.getElementById('dpMonthInner'),
+    months, monthIdx
+  );
+
+  // Generate day items
+  updateDatePickerDays(y, m, d);
+
+  document.getElementById('datePickerOverlay').classList.add('show');
+  window._lockedScroll = window.scrollY;
+  document.documentElement.classList.add('picker-open');
+  document.body.classList.add('picker-open');
+
+  // Handle month change to update days
+  var monthCol = document.getElementById('dpMonthColumn');
+  monthCol.addEventListener('touchend', function() { updateDatePickerDaysFromScroll(); }, { once: false });
+  monthCol.addEventListener('mouseup', function() { updateDatePickerDaysFromScroll(); }, { once: false });
+}
+
+function updateDatePickerDaysFromScroll() {
+  setTimeout(function() {
+    var ms = dpMonthPicker.getState().selectedIndex;
+    var ys = dpYearPicker.getState().selectedIndex;
+    var years = [];
+    var now = new Date();
+    for (var i = now.getFullYear() - 5; i <= now.getFullYear() + 5; i++) years.push(i);
+    var year = years[ys] || now.getFullYear();
+    var month = ms + 1;
+    var maxDay = getDaysInMonth(year, month);
+    var currentDay = dpDayPicker ? dpDayPicker.getState().selectedIndex + 1 : 1;
+    if (currentDay > maxDay) currentDay = maxDay;
+    updateDatePickerDays(year, month, currentDay);
+  }, 100);
+}
+
+function updateDatePickerDays(year, month, selectedDay) {
+  var daysInMonth = getDaysInMonth(year, month);
+  var days = [];
+  for (var k = 1; k <= daysInMonth; k++) {
+    days.push(k < 10 ? '0' + k : '' + k);
+  }
+  var dayIdx = Math.min(selectedDay - 1, daysInMonth - 1);
+  if (dayIdx < 0) dayIdx = 0;
+  dpDayPicker = createScrollPicker(
+    document.getElementById('dpDayColumn'),
+    document.getElementById('dpDayInner'),
+    days, dayIdx
+  );
+}
+
+function confirmDatePicker() {
+  var years = [];
+  var now = new Date();
+  for (var i = now.getFullYear() - 5; i <= now.getFullYear() + 5; i++) years.push(i);
+  var year = years[dpYearPicker.getState().selectedIndex];
+  var month = dpMonthPicker.getState().selectedIndex + 1;
+  var day = dpDayPicker.getState().selectedIndex + 1;
+  var monthStr = month < 10 ? '0' + month : '' + month;
+  var dayStr = day < 10 ? '0' + day : '' + day;
+  document.getElementById('fDate').value = year + '-' + monthStr + '-' + dayStr;
+  closeDatePicker();
+}
+
+function closeDatePicker() {
+  document.getElementById('datePickerOverlay').classList.remove('show');
+  document.documentElement.classList.remove('picker-open');
+  document.body.classList.remove('picker-open');
+  window.scrollTo(0, window._lockedScroll || 0);
+}
+
+// ===================================================================
+//  Time Picker
+// ===================================================================
+var tpHourPicker = null, tpMinutePicker = null;
+
+function openTimePicker() {
+  var val = document.getElementById('fOpenTime').value;
+  var now = new Date();
+  var h, m;
+  if (val && /^\d{2}:\d{2}$/.test(val)) {
+    h = parseInt(val.split(':')[0]);
+    m = parseInt(val.split(':')[1]);
+  } else {
+    h = now.getHours();
+    m = now.getMinutes();
+  }
+
+  // Generate hour items (0-23)
+  var hours = [];
+  for (var i = 0; i < 24; i++) {
+    hours.push(i < 10 ? '0' + i : '' + i);
+  }
+  tpHourPicker = createScrollPicker(
+    document.getElementById('tpHourColumn'),
+    document.getElementById('tpHourInner'),
+    hours, h
+  );
+
+  // Generate minute items (0-59)
+  var minutes = [];
+  for (var j = 0; j < 60; j++) {
+    minutes.push(j < 10 ? '0' + j : '' + j);
+  }
+  tpMinutePicker = createScrollPicker(
+    document.getElementById('tpMinuteColumn'),
+    document.getElementById('tpMinuteInner'),
+    minutes, m
+  );
+
+  document.getElementById('timePickerOverlay').classList.add('show');
+  window._lockedScroll = window.scrollY;
+  document.documentElement.classList.add('picker-open');
+  document.body.classList.add('picker-open');
+}
+
+function confirmTimePicker() {
+  var h = tpHourPicker.getState().selectedIndex;
+  var m = tpMinutePicker.getState().selectedIndex;
+  var hStr = h < 10 ? '0' + h : '' + h;
+  var mStr = m < 10 ? '0' + m : '' + m;
+  document.getElementById('fOpenTime').value = hStr + ':' + mStr;
+  closeTimePicker();
+}
+
+function closeTimePicker() {
+  document.getElementById('timePickerOverlay').classList.remove('show');
+  document.documentElement.classList.remove('picker-open');
+  document.body.classList.remove('picker-open');
+  window.scrollTo(0, window._lockedScroll || 0);
+}
 
 // ===================================================================
 //  INIT
