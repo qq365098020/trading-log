@@ -274,7 +274,7 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
   -webkit-backdrop-filter:blur(4px);
   backdrop-filter:blur(4px);
   z-index:200;
-  display:flex;align-items:flex-end;justify-content:center;
+  display:flex;align-items:center;justify-content:center;
   opacity:0;visibility:hidden;pointer-events:none;
   overscroll-behavior:none;touch-action:none;
   transition:opacity 0.5s cubic-bezier(0.32,0.72,0,1),visibility 0s 0.5s
@@ -288,18 +288,20 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
   -webkit-backdrop-filter:var(--blur);
   backdrop-filter:var(--blur);
   border:1px solid var(--glass-border);
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius:var(--radius-lg);
   width:100%;max-width:420px;max-height:80vh;overflow-y:auto;padding:0;
   box-shadow:var(--shadow-lg),inset 0 1px 0 oklch(1 0 0 / 0.4);
-  transform:translateY(100%);
-  transition:transform 0.5s cubic-bezier(0.32,0.72,0,1);
-  border-bottom:none;
+  transform:scale(0.9);
+  transition:transform 0.5s cubic-bezier(0.32,0.72,0,1),opacity 0.5s;
   margin:0 auto
 }
 .modal-overlay.show .modal{
-  transform:translateY(0)
+  transform:scale(1)
 }
 .modal-handle{display:none}
+#addPage{align-items:flex-end}
+#addPage .modal{border-radius:var(--radius-lg) var(--radius-lg) 0 0;max-width:100%;transform:translateY(100%)}
+#addPage.show .modal{transform:translateY(0)}
 .modal-header{
   display:flex;justify-content:space-between;align-items:center;
   padding:0.75rem 1rem 1rem;border-bottom:1px solid var(--border-subtle);
@@ -692,8 +694,8 @@ html.picker-open,body.picker-open{overflow:hidden;position:fixed;width:100%;heig
         <div class="phase-section active" id="phase1">
           <div class="section-title">📋 基础信息</div>
           <div class="form-row-date">
-            <div class="form-group"><label class="form-label">日期</label><input type="text" id="fDate" placeholder="2026-06-10" inputmode="none" readonly required onclick="openDatePicker()" style="cursor:pointer"></div>
-            <div class="form-group"><label class="form-label">开仓时间</label><input type="text" id="fOpenTime" placeholder="14:30" inputmode="none" readonly required onclick="openTimePicker()" style="cursor:pointer"></div>
+            <div class="form-group"><label class="form-label">日期</label><input type="text" id="fDate" placeholder="2026-06-10" inputmode="none" readonly required onclick="openDateTimePicker('date')" style="cursor:pointer"></div>
+            <div class="form-group"><label class="form-label">开仓时间</label><input type="text" id="fOpenTime" placeholder="14:30" inputmode="none" readonly required onclick="openDateTimePicker('time')" style="cursor:pointer"></div>
           </div>
           <div class="form-group"><label class="form-label">品种名称</label><input type="text" id="fSymbol" placeholder="甲醇、螺纹钢..." required></div>
           <div class="form-group"><label class="form-label">方向</label>
@@ -785,38 +787,24 @@ html.picker-open,body.picker-open{overflow:hidden;position:fixed;width:100%;heig
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src=""></div>
 
-<!-- iOS Date Picker -->
-<div class="picker-overlay" id="datePickerOverlay">
-  <div class="picker-sheet">
+<!-- Combined DateTime Picker -->
+<div class="picker-overlay" id="dateTimePickerOverlay" onclick="confirmDateTimePicker()">
+  <div class="picker-sheet" onclick="event.stopPropagation()">
     <div class="picker-toolbar">
-      <button class="picker-toolbar-btn" onclick="closeDatePicker()">取消</button>
-      <span class="picker-toolbar-title">选择日期</span>
-      <button class="picker-toolbar-btn done" onclick="confirmDatePicker()">完成</button>
+      <button class="picker-toolbar-btn" onclick="closeDateTimePicker()">取消</button>
+      <span class="picker-toolbar-title">选择日期时间</span>
+      <button class="picker-toolbar-btn done" onclick="confirmDateTimePicker()">完成</button>
     </div>
-    <div class="picker-columns" id="datePickerColumns">
-      <div class="picker-column" id="dpYearColumn"><div class="picker-column-inner" id="dpYearInner"></div></div>
+    <div class="picker-columns" id="dateTimePickerColumns">
+      <div class="picker-column" id="cdpYearColumn"><div class="picker-column-inner" id="cdpYearInner"></div></div>
       <div class="picker-label">年</div>
-      <div class="picker-column" id="dpMonthColumn"><div class="picker-column-inner" id="dpMonthInner"></div></div>
+      <div class="picker-column" id="cdpMonthColumn"><div class="picker-column-inner" id="cdpMonthInner"></div></div>
       <div class="picker-label">月</div>
-      <div class="picker-column" id="dpDayColumn"><div class="picker-column-inner" id="dpDayInner"></div></div>
+      <div class="picker-column" id="cdpDayColumn"><div class="picker-column-inner" id="cdpDayInner"></div></div>
       <div class="picker-label">日</div>
-      <div class="picker-highlight"></div>
-    </div>
-  </div>
-</div>
-
-<!-- iOS Time Picker -->
-<div class="picker-overlay" id="timePickerOverlay">
-  <div class="picker-sheet">
-    <div class="picker-toolbar">
-      <button class="picker-toolbar-btn" onclick="closeTimePicker()">取消</button>
-      <span class="picker-toolbar-title">选择时间</span>
-      <button class="picker-toolbar-btn done" onclick="confirmTimePicker()">完成</button>
-    </div>
-    <div class="picker-columns" id="timePickerColumns">
-      <div class="picker-column" id="tpHourColumn"><div class="picker-column-inner" id="tpHourInner"></div></div>
+      <div class="picker-column" id="cdpHourColumn"><div class="picker-column-inner" id="cdpHourInner"></div></div>
       <div class="picker-label">时</div>
-      <div class="picker-column" id="tpMinuteColumn"><div class="picker-column-inner" id="tpMinuteInner"></div></div>
+      <div class="picker-column" id="cdpMinuteColumn"><div class="picker-column-inner" id="cdpMinuteInner"></div></div>
       <div class="picker-label">分</div>
       <div class="picker-highlight"></div>
     </div>
@@ -1921,30 +1909,33 @@ function createScrollPicker(columnEl, innerEl, items, selectedIndex) {
 }
 
 // ===================================================================
-//  Date Picker
+//  Combined DateTime Picker
 // ===================================================================
-var datePickerData = { picker: null, year: null, month: null, day: null };
-var dpYearPicker = null, dpMonthPicker = null, dpDayPicker = null;
+var cdpYearPicker = null, cdpMonthPicker = null, cdpDayPicker = null;
+var cdpHourPicker = null, cdpMinutePicker = null;
 
 function getDaysInMonth(year, month) {
   return new Date(year, month, 0).getDate();
 }
 
-function openDatePicker() {
-  var val = document.getElementById('fDate').value;
+function openDateTimePicker(source) {
+  var dateVal = document.getElementById('fDate').value;
+  var timeVal = document.getElementById('fOpenTime').value;
   var now = new Date();
-  var y, m, d;
-  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    var parts = val.split('-');
-    y = parseInt(parts[0]);
-    m = parseInt(parts[1]);
-    d = parseInt(parts[2]);
+  var y, m, d, h, mi;
+
+  if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+    var dp = dateVal.split('-');
+    y = parseInt(dp[0]); m = parseInt(dp[1]); d = parseInt(dp[2]);
   } else {
-    y = now.getFullYear();
-    m = now.getMonth() + 1;
-    d = now.getDate();
+    y = now.getFullYear(); m = now.getMonth() + 1; d = now.getDate();
   }
-  datePickerData = { year: y, month: m, day: d };
+  if (timeVal && /^\d{2}:\d{2}$/.test(timeVal)) {
+    var tp = timeVal.split(':');
+    h = parseInt(tp[0]); mi = parseInt(tp[1]);
+  } else {
+    h = now.getHours(); mi = now.getMinutes();
+  }
 
   // Generate year items (current year - 5 to current year + 5)
   var currentYear = now.getFullYear();
@@ -1954,9 +1945,9 @@ function openDatePicker() {
   }
   var yearIdx = years.indexOf(y.toString());
   if (yearIdx < 0) yearIdx = 5;
-  dpYearPicker = createScrollPicker(
-    document.getElementById('dpYearColumn'),
-    document.getElementById('dpYearInner'),
+  cdpYearPicker = createScrollPicker(
+    document.getElementById('cdpYearColumn'),
+    document.getElementById('cdpYearInner'),
     years, yearIdx
   );
 
@@ -1965,44 +1956,68 @@ function openDatePicker() {
   for (var j = 1; j <= 12; j++) {
     months.push(j < 10 ? '0' + j : '' + j);
   }
-  var monthIdx = m - 1;
-  dpMonthPicker = createScrollPicker(
-    document.getElementById('dpMonthColumn'),
-    document.getElementById('dpMonthInner'),
-    months, monthIdx
+  cdpMonthPicker = createScrollPicker(
+    document.getElementById('cdpMonthColumn'),
+    document.getElementById('cdpMonthInner'),
+    months, m - 1
   );
 
   // Generate day items
-  updateDatePickerDays(y, m, d);
+  updateCDPDays(y, m, d);
 
-  document.getElementById('datePickerOverlay').classList.add('show');
+  // Generate hour items (0-23)
+  var hours = [];
+  for (var ii = 0; ii < 24; ii++) {
+    hours.push(ii < 10 ? '0' + ii : '' + ii);
+  }
+  cdpHourPicker = createScrollPicker(
+    document.getElementById('cdpHourColumn'),
+    document.getElementById('cdpHourInner'),
+    hours, h
+  );
+
+  // Generate minute items (0-59)
+  var minutes = [];
+  for (var jj = 0; jj < 60; jj++) {
+    minutes.push(jj < 10 ? '0' + jj : '' + jj);
+  }
+  cdpMinutePicker = createScrollPicker(
+    document.getElementById('cdpMinuteColumn'),
+    document.getElementById('cdpMinuteInner'),
+    minutes, mi
+  );
+
+  document.getElementById('dateTimePickerOverlay').classList.add('show');
   window._lockedScroll = window.scrollY;
   document.documentElement.classList.add('picker-open');
   document.body.classList.add('picker-open');
 
-  // Handle month change to update days
-  var monthCol = document.getElementById('dpMonthColumn');
-  monthCol.addEventListener('touchend', function() { updateDatePickerDaysFromScroll(); }, { once: false });
-  monthCol.addEventListener('mouseup', function() { updateDatePickerDaysFromScroll(); }, { once: false });
+  // Handle month/year change to update days
+  var monthCol = document.getElementById('cdpMonthColumn');
+  monthCol.addEventListener('touchend', function() { updateCDPDaysFromScroll(); }, { once: false });
+  monthCol.addEventListener('mouseup', function() { updateCDPDaysFromScroll(); }, { once: false });
+  var yearCol = document.getElementById('cdpYearColumn');
+  yearCol.addEventListener('touchend', function() { updateCDPDaysFromScroll(); }, { once: false });
+  yearCol.addEventListener('mouseup', function() { updateCDPDaysFromScroll(); }, { once: false });
 }
 
-function updateDatePickerDaysFromScroll() {
+function updateCDPDaysFromScroll() {
   setTimeout(function() {
-    var ms = dpMonthPicker.getState().selectedIndex;
-    var ys = dpYearPicker.getState().selectedIndex;
+    var ms = cdpMonthPicker.getState().selectedIndex;
+    var ys = cdpYearPicker.getState().selectedIndex;
     var years = [];
     var now = new Date();
     for (var i = now.getFullYear() - 5; i <= now.getFullYear() + 5; i++) years.push(i);
     var year = years[ys] || now.getFullYear();
     var month = ms + 1;
     var maxDay = getDaysInMonth(year, month);
-    var currentDay = dpDayPicker ? dpDayPicker.getState().selectedIndex + 1 : 1;
+    var currentDay = cdpDayPicker ? cdpDayPicker.getState().selectedIndex + 1 : 1;
     if (currentDay > maxDay) currentDay = maxDay;
-    updateDatePickerDays(year, month, currentDay);
+    updateCDPDays(year, month, currentDay);
   }, 100);
 }
 
-function updateDatePickerDays(year, month, selectedDay) {
+function updateCDPDays(year, month, selectedDay) {
   var daysInMonth = getDaysInMonth(year, month);
   var days = [];
   for (var k = 1; k <= daysInMonth; k++) {
@@ -2010,89 +2025,35 @@ function updateDatePickerDays(year, month, selectedDay) {
   }
   var dayIdx = Math.min(selectedDay - 1, daysInMonth - 1);
   if (dayIdx < 0) dayIdx = 0;
-  dpDayPicker = createScrollPicker(
-    document.getElementById('dpDayColumn'),
-    document.getElementById('dpDayInner'),
+  cdpDayPicker = createScrollPicker(
+    document.getElementById('cdpDayColumn'),
+    document.getElementById('cdpDayInner'),
     days, dayIdx
   );
 }
 
-function confirmDatePicker() {
+function confirmDateTimePicker() {
   var years = [];
   var now = new Date();
   for (var i = now.getFullYear() - 5; i <= now.getFullYear() + 5; i++) years.push(i);
-  var year = years[dpYearPicker.getState().selectedIndex];
-  var month = dpMonthPicker.getState().selectedIndex + 1;
-  var day = dpDayPicker.getState().selectedIndex + 1;
+  var year = years[cdpYearPicker.getState().selectedIndex];
+  var month = cdpMonthPicker.getState().selectedIndex + 1;
+  var day = cdpDayPicker.getState().selectedIndex + 1;
+  var hour = cdpHourPicker.getState().selectedIndex;
+  var minute = cdpMinutePicker.getState().selectedIndex;
+
   var monthStr = month < 10 ? '0' + month : '' + month;
   var dayStr = day < 10 ? '0' + day : '' + day;
+  var hourStr = hour < 10 ? '0' + hour : '' + hour;
+  var minuteStr = minute < 10 ? '0' + minute : '' + minute;
+
   document.getElementById('fDate').value = year + '-' + monthStr + '-' + dayStr;
-  closeDatePicker();
+  document.getElementById('fOpenTime').value = hourStr + ':' + minuteStr;
+  closeDateTimePicker();
 }
 
-function closeDatePicker() {
-  document.getElementById('datePickerOverlay').classList.remove('show');
-  document.documentElement.classList.remove('picker-open');
-  document.body.classList.remove('picker-open');
-  window.scrollTo(0, window._lockedScroll || 0);
-}
-
-// ===================================================================
-//  Time Picker
-// ===================================================================
-var tpHourPicker = null, tpMinutePicker = null;
-
-function openTimePicker() {
-  var val = document.getElementById('fOpenTime').value;
-  var now = new Date();
-  var h, m;
-  if (val && /^\d{2}:\d{2}$/.test(val)) {
-    h = parseInt(val.split(':')[0]);
-    m = parseInt(val.split(':')[1]);
-  } else {
-    h = now.getHours();
-    m = now.getMinutes();
-  }
-
-  // Generate hour items (0-23)
-  var hours = [];
-  for (var i = 0; i < 24; i++) {
-    hours.push(i < 10 ? '0' + i : '' + i);
-  }
-  tpHourPicker = createScrollPicker(
-    document.getElementById('tpHourColumn'),
-    document.getElementById('tpHourInner'),
-    hours, h
-  );
-
-  // Generate minute items (0-59)
-  var minutes = [];
-  for (var j = 0; j < 60; j++) {
-    minutes.push(j < 10 ? '0' + j : '' + j);
-  }
-  tpMinutePicker = createScrollPicker(
-    document.getElementById('tpMinuteColumn'),
-    document.getElementById('tpMinuteInner'),
-    minutes, m
-  );
-
-  document.getElementById('timePickerOverlay').classList.add('show');
-  window._lockedScroll = window.scrollY;
-  document.documentElement.classList.add('picker-open');
-  document.body.classList.add('picker-open');
-}
-
-function confirmTimePicker() {
-  var h = tpHourPicker.getState().selectedIndex;
-  var m = tpMinutePicker.getState().selectedIndex;
-  var hStr = h < 10 ? '0' + h : '' + h;
-  var mStr = m < 10 ? '0' + m : '' + m;
-  document.getElementById('fOpenTime').value = hStr + ':' + mStr;
-  closeTimePicker();
-}
-
-function closeTimePicker() {
-  document.getElementById('timePickerOverlay').classList.remove('show');
+function closeDateTimePicker() {
+  document.getElementById('dateTimePickerOverlay').classList.remove('show');
   document.documentElement.classList.remove('picker-open');
   document.body.classList.remove('picker-open');
   window.scrollTo(0, window._lockedScroll || 0);
