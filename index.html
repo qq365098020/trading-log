@@ -520,8 +520,13 @@ input::placeholder,textarea::placeholder{color:var(--text-muted)}
 .picker-highlight{
   position:absolute;top:50%;left:4px;right:4px;height:44px;
   transform:translateY(-50%);
-  background:#f5f5f5;border-radius:8px;
-  pointer-events:none;z-index:0
+  background:rgba(255,255,255,0.55);
+  backdrop-filter:blur(12px) saturate(180%);
+  -webkit-backdrop-filter:blur(12px) saturate(180%);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius:10px;
+  pointer-events:none;z-index:0;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06)
 }
 /* Body scroll lock */
 html.picker-open,body.picker-open{overflow:hidden;position:fixed;width:100%;height:100%;overscroll-behavior:none;touch-action:pan-y pinch-zoom}
@@ -1006,7 +1011,12 @@ function showAddPage(editId) {
   }
   currentPhase = 1;
   updatePhaseUI();
-  document.getElementById('addPage').classList.add('show');
+  var apEl = document.getElementById('addPage');
+  // Force reflow to trigger CSS transition
+  apEl.style.visibility = 'hidden';
+  void apEl.offsetHeight;
+  apEl.style.visibility = '';
+  apEl.classList.add('show');
   window._lockedScroll = window.scrollY;
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
