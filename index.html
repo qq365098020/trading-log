@@ -1011,11 +1011,16 @@ function showAddPage(editId) {
   updatePhaseUI();
   var apEl = document.getElementById('addPage');
   var apModal = apEl.querySelector('.modal');
-  // will-change tells Safari compositor to prepare for animation
-  apModal.style.willChange = 'transform, opacity';
-  void apModal.offsetHeight;
+  // Web Animations API — works reliably on Safari
   apEl.classList.add('show');
-  setTimeout(function(){ apModal.style.willChange = ''; }, 500);
+  apModal.animate([
+    { transform: 'scale(0.9)', opacity: 0 },
+    { transform: 'scale(1)', opacity: 1 }
+  ], {
+    duration: 400,
+    easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+    fill: 'forwards'
+  });
   window._lockedScroll = window.scrollY;
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
