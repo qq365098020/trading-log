@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>交易日志</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  /* Base — light warm-tinted gray */
+  --bg:oklch(0.97 0.005 90);
+  --bg-gradient:linear-gradient(135deg, oklch(0.97 0.008 85), oklch(0.96 0.006 260), oklch(0.95 0.008 200));
+
+  /* Glass surfaces — semi-transparent white */
+  --glass:oklch(1 0 0 / 0.72);
+  --glass-border:oklch(1 0 0 / 0.5);
+  --glass-thick:oklch(1 0 0 / 0.82);
+
+  /* Solid surfaces */
+  --surface:oklch(0.995 0 0);
+  --surface-elevated:oklch(1 0 0);
+
+  /* Borders */
+  --border:oklch(0.92 0.005 90);
+  --border-subtle:oklch(0.94 0.003 90);
+
+  /* Text — high contrast on light bg */
+  --text-primary:oklch(0.15 0.005 260);
+  --text-secondary:oklch(0.42 0.01 260);
+  --text-muted:oklch(0.58 0.01 90);
+
+  /* Accent — vibrant blue like iOS */
+  --accent:oklch(0.55 0.18 250);
+  --accent-soft:oklch(0.55 0.18 250 / 0.1);
+
+  /* Semantic — Chinese convention: red=up/long, green=down/short */
+  --red:oklch(0.60 0.22 25);
+  --red-soft:oklch(0.60 0.22 25 / 0.1);
+  --green:oklch(0.55 0.18 155);
+  --green-soft:oklch(0.55 0.18 155 / 0.1);
+  --orange:oklch(0.68 0.16 60);
+  --purple:oklch(0.55 0.15 300);
+  --cyan:oklch(0.78 0.12 195);
+
+  --radius-sm:10px;
+  --radius:16px;
+  --radius-lg:22px;
+
+  /* iOS-style soft shadows */
+  --shadow-sm:0 1px 2px oklch(0 0 0 / 0.04);
+  --shadow:0 2px 8px oklch(0 0 0 / 0.06), 0 8px 24px oklch(0 0 0 / 0.04);
+  --shadow-lg:0 8px 32px oklch(0 0 0 / 0.08), 0 16px 48px oklch(0 0 0 / 0.05);
+
+  /* Glass blur */
+  --blur:blur(20px) saturate(180%);
+}
+
+/* Typography */
+h1,h2,h3{text-wrap:balance}
+p,.detail-text{text-wrap:pretty}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  background:var(--bg-gradient);background-attachment:fixed;position:relative;
+  color:var(--text-primary);
+  min-height:100vh;overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
+  font-size:1rem;line-height:1.6
+}
+html.modal-open,body.modal-open{overflow:hidden;position:fixed;width:100%;height:100%;overscroll-behavior:none;touch-action:pan-y pinch-zoom}
+/* Colorful ambient blobs */
+body::before,body::after{
+  content:"";position:fixed;border-radius:50%;pointer-events:none;z-index:-1;filter:blur(80px);opacity:0.45
+}
+body::before{
+  width:50vw;height:50vw;top:-10vw;left:-10vw;
+  background:radial-gradient(circle,oklch(0.85 0.12 300),oklch(0.85 0.08 260),transparent 70%)
+}
+body::after{
+  width:60vw;height:60vw;bottom:-15vw;right:-15vw;
+  background:radial-gradient(circle,oklch(0.88 0.10 160),oklch(0.85 0.08 220),transparent 70%)
+}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+
+/* Header — frosted glass */
+.header{
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--glass-border);
+  padding:0.75rem 1rem;position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  min-height:3rem;
+  box-shadow:var(--shadow-sm),inset 0 1px 0 oklch(1 0 0 / 0.4)
+}
+.header h1{font-size:clamp(1.25rem,2.5vw,1.5rem);font-weight:700}
+.header-right{display:flex;gap:0.75rem;align-items:center}
+.sync-badge{font-size:0.75rem;color:var(--text-muted);transition:color 0.35s}
+
+/* Tabs — frosted glass */
+.tabs{
+  display:flex;
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--glass-border);
+  position:sticky;top:48px;z-index:99;
+  box-shadow:var(--shadow-sm),inset 0 1px 0 oklch(1 0 0 / 0.4)
+}
+.tab{
+  flex:1;text-align:center;
+  padding:0.75rem 0.5rem;font-size:0.8125rem;
+  color:var(--text-muted);cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:color 0.4s cubic-bezier(0.25,0.1,0.25,1),border-color 0.4s cubic-bezier(0.25,0.1,0.25,1);
+  white-space:nowrap;min-height:2.75rem;
+  display:flex;align-items:center;justify-content:center
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Pages */
+.page{display:none;padding:1rem;padding-bottom:5rem}
+.page.active{display:block}
+
+/* Cards — glass */
+.card{
+  background:var(--glass);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);
+  padding:1rem;margin-bottom:0.75rem;
+  border:1px solid var(--glass-border);
+  box-shadow:var(--shadow-sm),inset 0 1px 0 oklch(1 0 0 / 0.4)
+}
+.card-title{
+  font-size:0.875rem;font-weight:600;color:var(--text-secondary);
+  margin-bottom:0.75rem;display:flex;align-items:center;gap:0.375rem
+}
+.section-title{
+  font-size:0.8125rem;font-weight:600;color:var(--accent);
+  margin:1rem 0 0.5rem;padding-left:0.25rem;
+  display:flex;align-items:center;gap:0.375rem
+}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.625rem;margin-bottom:0.75rem}
+.stat-box{
+  background:var(--glass);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius);
+  padding:1rem;text-align:center;
+  box-shadow:var(--shadow-sm)
+}
+.stat-label{font-size:0.75rem;color:var(--text-muted);margin-bottom:0.25rem}
+.stat-value{font-size:1.25rem;font-weight:700}
+.stat-value.profit{color:var(--red)}
+.stat-value.loss{color:var(--green)}
+.stat-value.neutral{color:var(--text-primary)}
+
+/* Forms */
+.form-group{margin-bottom:0.75rem}
+.form-label{font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.25rem;display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.625rem}
+.form-row-date{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem}
+input[type="text"],input[type="number"],input[type="date"],input[type="time"],textarea,select{
+  width:100%;padding:0.75rem 1rem;
+  background:oklch(1 0 0 / 0.6);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text-primary);font-size:0.9375rem;
+  outline:none;
+  transition:border-color 0.35s cubic-bezier(0.25,0.1,0.25,1),box-shadow 0.35s cubic-bezier(0.25,0.1,0.25,1)
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft),var(--shadow-sm)
+}
+textarea{min-height:3.75rem;resize:vertical;line-height:1.5}
+select{
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8fa0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 0.75rem center
+}
+input::placeholder,textarea::placeholder{color:var(--text-muted)}
+
+/* Direction toggle */
+.dir-toggle{display:flex;gap:0;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+.dir-btn{
+  flex:1;padding:0.625rem;text-align:center;font-weight:600;font-size:0.9375rem;
+  cursor:pointer;transition:all 0.35s cubic-bezier(0.25,0.1,0.25,1);
+  background:oklch(1 0 0 / 0.6);color:var(--text-muted);min-height:2.75rem;
+  display:flex;align-items:center;justify-content:center
+}
+.dir-btn.active-long{background:var(--red);color:#fff}
+.dir-btn.active-short{background:var(--green);color:#fff}
+
+/* Image Upload */
+.img-upload-zone{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:1.25rem;text-align:center;cursor:pointer;
+  transition:border-color 0.35s cubic-bezier(0.25,0.1,0.25,1),background 0.35s cubic-bezier(0.25,0.1,0.25,1);
+  color:var(--text-muted);font-size:0.8125rem;min-height:5rem;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.25rem
+}
+.img-upload-zone:active{border-color:var(--accent);background:var(--accent-soft)}
+.img-upload-zone .icon{font-size:1.75rem}
+.img-preview-grid{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem}
+.img-preview{position:relative;width:5rem;height:5rem;border-radius:var(--radius-sm);overflow:hidden}
+.img-preview img{width:100%;height:100%;object-fit:cover}
+.img-preview .del{
+  position:absolute;top:2px;right:2px;width:1.25rem;height:1.25rem;
+  background:oklch(0.55 0.22 25 / 0.9);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.75rem;color:#fff;cursor:pointer
+}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:0.375rem;
+  padding:0.75rem 1.25rem;border-radius:var(--radius-sm);font-weight:600;
+  font-size:0.9375rem;cursor:pointer;border:none;
+  transition:all 0.35s cubic-bezier(0.25,0.1,0.25,1);width:100%;
+  min-height:2.75rem
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px oklch(0.55 0.18 250 / 0.25)}
+.btn-primary:active{transform:scale(0.98);opacity:0.9}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 2px 8px oklch(0.60 0.22 25 / 0.25)}
+.btn-danger:active{transform:scale(0.98);opacity:0.9}
+.btn-outline{
+  background:var(--glass);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:var(--accent);border:1px solid var(--accent)
+}
+.btn-outline:active{background:var(--accent-soft)}
+.btn-sm{padding:0.5rem 0.875rem;font-size:0.75rem;width:auto;border-radius:var(--radius-sm)}
+.btn-group{display:flex;gap:0.625rem;margin-top:1rem}
+.btn-group .btn{flex:1}
+
+/* Trade Card — glass */
+.trade-card{
+  background:var(--glass);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius);
+  padding:1rem;
+  margin-bottom:0.75rem;
+  cursor:pointer;
+  transition:transform 0.3s cubic-bezier(0.25,0.1,0.25,1),box-shadow 0.3s;
+  box-shadow:var(--shadow-sm)
+}
+.trade-card:active{transform:scale(0.97);box-shadow:var(--shadow)}
+.trade-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem}
+.trade-card-symbol{font-weight:700;font-size:0.9375rem}
+.trade-card-tag{padding:0.125rem 0.5rem;border-radius:var(--radius-sm);font-size:0.6875rem;font-weight:600}
+.tag-long{background:var(--red-soft);color:var(--red)}
+.tag-short{background:var(--green-soft);color:var(--green)}
+.trade-card-meta{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted)}
+.trade-card-pnl{font-weight:700;font-size:0.9375rem}
+.trade-card-pnl.profit{color:var(--red)}
+.trade-card-pnl.loss{color:var(--green)}
+
+/* Modal — animated center-expand glass */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:oklch(0 0 0 / 0.3);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;pointer-events:none;
+  overscroll-behavior:none;touch-action:none;
+  transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0.4s
+}
+.modal-overlay.show{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0s
+}
+.modal{
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-lg);
+  width:92%;max-width:420px;max-height:80vh;overflow-y:auto;padding:0;
+  box-shadow:var(--shadow-lg),inset 0 1px 0 oklch(1 0 0 / 0.4);
+  transform:scale(0.92);opacity:0;
+  transition:transform 0.4s cubic-bezier(0.25,0.1,0.25,1),opacity 0.4s cubic-bezier(0.25,0.1,0.25,1);
+  margin:auto
+}
+.modal-overlay.show .modal{
+  transform:scale(1);opacity:1
+}
+.modal-handle{display:none}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0.75rem 1rem 1rem;border-bottom:1px solid var(--border-subtle);
+  position:sticky;top:0;
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  z-index:1
+}
+.modal-header h2{font-size:1rem}
+.modal-close{
+  background:none;border:none;color:var(--text-secondary);
+  font-size:1.5rem;cursor:pointer;padding:0.25rem;
+  min-width:2.75rem;min-height:2.75rem;
+  display:flex;align-items:center;justify-content:center
+}
+.modal-body{padding:1rem 1rem 5rem}
+.detail-row{
+  display:flex;justify-content:space-between;padding:0.5rem 0;
+  border-bottom:1px solid var(--border-subtle);font-size:0.8125rem
+}
+.detail-row .label{color:var(--text-muted)}
+.detail-row .value{font-weight:500;text-align:right;max-width:60%}
+.detail-section{margin-top:1rem}
+.detail-section h3{font-size:0.8125rem;font-weight:600;color:var(--accent);margin-bottom:0.5rem}
+.detail-text{font-size:0.8125rem;line-height:1.6;color:var(--text-secondary);white-space:pre-wrap}
+.detail-images{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem}
+.detail-images img{max-width:100%;border-radius:var(--radius-sm);cursor:pointer}
+
+/* Charts */
+.chart-container{position:relative;width:100%;margin:0.75rem 0}
+.chart-container canvas{width:100%!important}
+
+/* Filter */
+.filter-bar{display:flex;gap:0.5rem;margin-bottom:0.75rem;overflow-x:auto;padding-bottom:0.25rem}
+.filter-chip{
+  padding:0.5rem 1rem;border-radius:2rem;font-size:0.8125rem;
+  background:var(--glass);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:var(--text-muted);
+  border:1px solid var(--glass-border);cursor:pointer;white-space:nowrap;
+  transition:all 0.35s cubic-bezier(0.25,0.1,0.25,1);min-height:2.25rem;
+  display:flex;align-items:center
+}
+.filter-chip.active{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+  box-shadow:0 2px 8px oklch(0.55 0.18 250 / 0.3)
+}
+
+/* Search */
+.search-bar{position:relative;margin-bottom:0.75rem}
+.search-bar input{padding-left:2.25rem}
+.search-bar::before{content:"🔍";position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);font-size:0.875rem;z-index:1}
+
+/* Toast — glass */
+.toast{
+  position:fixed;bottom:5rem;left:50%;
+  transform:translateX(-50%) translateY(10px);
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  color:var(--text-primary);
+  padding:0.75rem 1.5rem;border-radius:var(--radius);font-size:0.875rem;
+  z-index:300;opacity:0;pointer-events:none;
+  box-shadow:var(--shadow);
+  transition:opacity 0.5s,transform 0.5s
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Storage info */
+.storage-info{
+  background:var(--surface-elevated);border-radius:var(--radius);
+  padding:0.625rem 0.875rem;margin-bottom:0.75rem;font-size:0.75rem;
+  color:var(--text-muted);display:flex;align-items:center;gap:0.5rem
+}
+
+/* Empty state */
+.empty-state{text-align:center;padding:2.5rem 1.25rem;color:var(--text-muted)}
+.empty-state .icon{font-size:3rem;margin-bottom:0.75rem}
+.empty-state p{font-size:0.9375rem;margin-bottom:1rem}
+.empty-state .btn{width:auto;display:inline-flex;padding:0.75rem 1.5rem}
+
+/* Phase indicator */
+.phase-indicator{display:flex;gap:0;margin-bottom:1rem}
+.phase-step{
+  flex:1;text-align:center;padding:0.5rem 0.25rem;font-size:0.6875rem;
+  color:var(--text-muted);border-bottom:2px solid var(--border);
+  cursor:pointer;transition:all 0.35s cubic-bezier(0.25,0.1,0.25,1)
+}
+.phase-step.active{color:var(--accent);border-bottom-color:var(--accent)}
+.phase-step.done{color:var(--green);border-bottom-color:var(--green)}
+.phase-section{display:none}
+.phase-section.active{display:block}
+
+/* Lightbox — animated */
+.lightbox{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:oklch(0 0 0 / 0.95);z-index:500;
+  align-items:center;justify-content:center;cursor:pointer;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0.4s
+}
+.lightbox.show{opacity:1;visibility:visible;pointer-events:auto;transition:opacity 0.4s cubic-bezier(0.25,0.1,0.25,1),visibility 0s 0s}
+.lightbox img{max-width:95%;max-height:90vh;object-fit:contain;border-radius:var(--radius-sm)}
+
+/* PnL badge */
+.pnl-badge{display:inline-block;padding:0.25rem 0.875rem;border-radius:var(--radius-sm);font-size:0.8125rem;font-weight:600}
+.pnl-badge.profit{background:var(--red-soft);color:var(--red)}
+.pnl-badge.loss{background:var(--green-soft);color:var(--green)}
+
+/* Settings */
+.setting-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0.875rem 0;border-bottom:1px solid var(--border-subtle)
+}
+.setting-item:last-child{border-bottom:none}
+.setting-label{font-size:0.875rem}
+.setting-desc{font-size:0.6875rem;color:var(--text-muted);margin-top:0.125rem}
+
+/* Loading — light theme */
+.loading-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:oklch(0.97 0.005 90 / 0.7);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  z-index:400;
+  display:flex;align-items:center;justify-content:center
+}
+.loading-overlay .spinner{
+  width:2.5rem;height:2.5rem;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin 0.8s linear infinite
+}
+
+/* FAB — glass */
+.fab{
+  position:fixed;bottom:1.5rem;right:1.5rem;
+  width:3.5rem;height:3.5rem;border-radius:50%;
+  background:var(--glass-thick);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  color:var(--accent);
+  font-size:1.5rem;cursor:pointer;
+  box-shadow:var(--shadow);
+  z-index:90;display:none;align-items:center;justify-content:center;
+  transition:transform 0.4s cubic-bezier(0.25,0.1,0.25,1),opacity 0.4s
+}
+.fab:active{transform:scale(0.92)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:oklch(0 0 0 / 0.15);border-radius:2px}
+
+/* Animations */
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>交易日志</h1>
+  <div class="header-right">
+    <span id="syncStatus" class="sync-badge">⚫ 离线</span>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="mainTabs">
+  <div class="tab active" data-page="trades">记录</div>
+  <div class="tab" data-page="dashboard">概览</div>
+  <div class="tab" data-page="charts">统计</div>
+  <div class="tab" data-page="settings">设置</div>
+</div>
+
+<!-- ===== PAGE: TRADES (记录) — DEFAULT ===== -->
+<div class="page active" id="page-trades">
+  <div class="search-bar"><input type="text" id="searchInput" placeholder="搜索品种、备注..."></div>
+  <div class="filter-bar" id="filterBar">
+    <div class="filter-chip active" data-filter="all">全部</div>
+    <div class="filter-chip" data-filter="long">做多</div>
+    <div class="filter-chip" data-filter="short">做空</div>
+    <div class="filter-chip" data-filter="profit">盈利</div>
+    <div class="filter-chip" data-filter="loss">亏损</div>
+  </div>
+  <div id="tradeList"></div>
+</div>
+
+<!-- ===== PAGE: DASHBOARD (概览) ===== -->
+<div class="page" id="page-dashboard">
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-label">总交易</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat-box"><div class="stat-label">胜率</div><div class="stat-value" id="statWinRate">0%</div></div>
+    <div class="stat-box"><div class="stat-label">总盈亏</div><div class="stat-value" id="statTotalPnl">0</div></div>
+    <div class="stat-box"><div class="stat-label">平均盈亏比</div><div class="stat-value" id="statAvgRR">0:1</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-label">盈利笔数</div><div class="stat-value profit" id="statWinCount">0</div></div>
+    <div class="stat-box"><div class="stat-label">亏损笔数</div><div class="stat-value loss" id="statLossCount">0</div></div>
+    <div class="stat-box"><div class="stat-label">最大单笔盈利</div><div class="stat-value profit" id="statMaxWin">0</div></div>
+    <div class="stat-box"><div class="stat-label">最大单笔亏损</div><div class="stat-value loss" id="statMaxLoss">0</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📈 累计盈亏曲线</div>
+    <div class="chart-container"><canvas id="dashboardChart" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">最近交易</div>
+    <div id="recentTrades"></div>
+  </div>
+</div>
+
+<!-- ===== PAGE: CHARTS (统计) ===== -->
+<div class="page" id="page-charts">
+  <div class="card"><div class="card-title">🎯 胜负分布</div><div class="chart-container"><canvas id="winLossChart" height="200"></canvas></div></div>
+  <div class="card"><div class="card-title">💰 盈亏分布</div><div class="chart-container"><canvas id="pnlDistChart" height="200"></canvas></div></div>
+  <div class="card"><div class="card-title">📅 每日盈亏</div><div class="chart-container"><canvas id="dailyPnlChart" height="200"></canvas></div></div>
+  <div class="card"><div class="card-title">⏰ 交易时段分析</div><div class="chart-container"><canvas id="timeChart" height="200"></canvas></div></div>
+</div>
+
+<!-- ===== PAGE: SETTINGS (设置) ===== -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">🔄 同步管理</div>
+    <div class="setting-item">
+      <div><div class="setting-label">手动同步</div><div class="setting-desc">推送到Ubuntu服务器并拉取最新数据</div></div>
+      <button class="btn btn-sm btn-outline" onclick="fullSync()">同步</button>
+    </div>
+    <div class="setting-item">
+      <div><div class="setting-label">清理已同步数据</div><div class="setting-desc">删除已成功同步到服务器的本地数据</div></div>
+      <button class="btn btn-sm btn-outline" onclick="cleanupSyncedData()">清理</button>
+    </div>
+    <div class="setting-item">
+      <div><div class="setting-label">服务器状态</div><div class="setting-desc" id="serverStatusText">检测中...</div></div>
+      <button class="btn btn-sm btn-outline" onclick="checkServer()">刷新</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚙️ 数据管理</div>
+    <div class="setting-item">
+      <div><div class="setting-label">导出全部数据</div><div class="setting-desc" id="exportInfo">交易记录 + 截图 → JSON文件</div></div>
+      <button class="btn btn-sm btn-outline" onclick="exportAllData()">导出</button>
+    </div>
+    <div class="setting-item">
+      <div><div class="setting-label">导入数据</div><div class="setting-desc">从JSON文件恢复（可合并或替换）</div></div>
+      <button class="btn btn-sm btn-outline" onclick="importData()">导入</button>
+    </div>
+    <div class="setting-item">
+      <div><div class="setting-label">清除所有数据</div><div class="setting-desc" id="storageInfo">计算中...</div></div>
+      <button class="btn btn-sm btn-danger" onclick="clearAllData()">清除</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💾 存储说明</div>
+    <div style="font-size:0.8125rem;color:var(--text-muted);line-height:1.8">
+      <p>• 交易记录存于 localStorage（轻量）</p>
+      <p>• 截图存于 IndexedDB（大容量）</p>
+      <p>• 两者都存在浏览器本地，<b style="color:var(--orange)">换手机/清缓存会丢失</b></p>
+      <p style="margin-top:0.5rem;color:var(--orange)">⚠ 请定期使用「导出」功能备份！</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD/EDIT TRADE ===== -->
+<div class="modal-overlay" id="addPage">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="formTitle">新增交易</h2>
+      <button class="modal-close" onclick="closeAddPage()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="phase-indicator">
+        <div class="phase-step active" data-phase="1" onclick="switchPhase(1)">① 开仓时</div>
+        <div class="phase-step" data-phase="2" onclick="switchPhase(2)">② 平仓时</div>
+        <div class="phase-step" data-phase="3" onclick="switchPhase(3)">③ 复盘</div>
+      </div>
+      <form id="tradeForm" onsubmit="return false">
+        <input type="hidden" id="editId" value="">
+        <!-- Phase 1 -->
+        <div class="phase-section active" id="phase1">
+          <div class="section-title">📋 基础信息</div>
+          <div class="form-row-date">
+            <div class="form-group"><label class="form-label">日期</label><input type="text" id="fDate" placeholder="2026-06-10" inputmode="numeric" required></div>
+            <div class="form-group"><label class="form-label">开仓时间</label><input type="text" id="fOpenTime" placeholder="14:30" inputmode="numeric" required></div>
+          </div>
+          <div class="form-group"><label class="form-label">品种名称</label><input type="text" id="fSymbol" placeholder="甲醇、螺纹钢..." required></div>
+          <div class="form-group"><label class="form-label">方向</label>
+            <div class="dir-toggle"><div class="dir-btn active-long" id="dirLong" onclick="setDir('long')">↑ 做多</div><div class="dir-btn" id="dirShort" onclick="setDir('short')">↓ 做空</div></div>
+          </div>
+          <div class="form-row-3">
+            <div class="form-group"><label class="form-label">手数</label><input type="number" id="fLots" step="0.01" placeholder="手" required></div>
+            <div class="form-group"><label class="form-label">开仓价</label><input type="number" id="fOpenPrice" step="any" placeholder="价格" required></div>
+            <div class="form-group"><label class="form-label">止损价</label><input type="number" id="fStopLoss" step="any" placeholder="止损"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">目标价</label><input type="number" id="fTargetPrice" step="any" placeholder="目标"></div>
+            <div class="form-group"><label class="form-label">盈亏比</label><input type="number" id="fRR" step="0.1" placeholder="如2.0"></div>
+          </div>
+          <div class="section-title">🧠 交易逻辑</div>
+          <div class="form-group"><label class="form-label">市场结构</label><textarea id="fMarketStructure" placeholder="趋势/震荡/关键位？当前什么状态？"></textarea></div>
+          <div class="form-group"><label class="form-label">触发信号（越具体越好）</label><textarea id="fSignal" placeholder="具体看到了什么信号？"></textarea></div>
+          <div class="form-group"><label class="form-label">📸 K线截图（标出入场点）</label>
+            <div class="img-upload-zone" onclick="pickImage('entry')"><div class="icon">📷</div><div>点击上传截图</div></div>
+            <div class="img-preview-grid" id="entryImgPreview"></div>
+          </div>
+          <div class="form-group"><label class="form-label">备注</label><textarea id="fNotes" placeholder="其他想记录的"></textarea></div>
+        </div>
+        <!-- Phase 2 -->
+        <div class="phase-section" id="phase2">
+          <div class="section-title">📊 平仓信息</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">平仓时间</label><input type="time" id="fCloseTime"></div>
+            <div class="form-group"><label class="form-label">平仓价</label><input type="number" id="fClosePrice" step="any" placeholder="价格"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">盈亏金额</label><input type="number" id="fPnl" step="any" placeholder="正盈利 负亏损"></div>
+            <div class="form-group"><label class="form-label">平仓原因</label>
+              <select id="fCloseReason"><option value="">请选择</option><option value="止盈到位">止盈到位</option><option value="主动离场">主动判断离场</option><option value="止损出场">止损出场</option><option value="被动平仓">被动平仓</option><option value="其他">其他</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">持仓时长</label><input type="text" id="fDuration" placeholder="如2小时、1天"></div>
+          <div class="form-group"><label class="form-label">📸 平仓截图</label>
+            <div class="img-upload-zone" onclick="pickImage('close')"><div class="icon">📷</div><div>点击上传截图</div></div>
+            <div class="img-preview-grid" id="closeImgPreview"></div>
+          </div>
+        </div>
+        <!-- Phase 3 -->
+        <div class="phase-section" id="phase3">
+          <div class="section-title">🔍 交易复盘</div>
+          <div class="form-group"><label class="form-label">✅ 做对了什么？</label><textarea id="fWhatRight" placeholder="具体、客观地描述"></textarea></div>
+          <div class="form-group"><label class="form-label">❌ 做错了什么？</label><textarea id="fWhatWrong" placeholder="有没有偏离原计划？"></textarea></div>
+          <div class="form-group"><label class="form-label">😊 情绪状态</label>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem" id="emotionGroup">
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="冷静"> 冷静</label>
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="冲动"> 冲动</label>
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="恐惧"> 恐惧</label>
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="贪婪"> 贪婪</label>
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="犹豫"> 犹豫</label>
+              <label style="display:flex;align-items:center;gap:0.25rem;font-size:0.8125rem;cursor:pointer"><input type="radio" name="emotion" value="自信"> 自信</label>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">🔄 如果重来，会怎么改？</label><textarea id="fIfRedo" placeholder="反思与改进"></textarea></div>
+          <div class="form-group"><label class="form-label">💡 一句话总结启示</label><input type="text" id="fLesson" placeholder="这笔交易教会了你什么？"></div>
+          <div class="form-group"><label class="form-label">📸 复盘截图</label>
+            <div class="img-upload-zone" onclick="pickImage('review')"><div class="icon">📷</div><div>点击上传截图</div></div>
+            <div class="img-preview-grid" id="reviewImgPreview"></div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-outline" id="prevPhaseBtn" onclick="prevPhase()" style="display:none">上一步</button>
+          <button type="button" class="btn btn-primary" id="nextPhaseBtn" onclick="nextPhase()">下一步</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TRADE DETAIL ===== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="detailTitle">交易详情</h2>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <button class="btn btn-sm btn-outline" id="editBtn">编辑</button>
+        <button class="modal-close" onclick="closeDetail()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src=""></div>
+
+<!-- FAB -->
+<div class="fab" id="fab" onclick="showAddPage()">＋</div>
+
+<!-- Hidden inputs -->
+<input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
+<input type="file" id="importInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none"><div class="spinner"></div></div>
+
+<script>
+// ===================================================================
+//  CONFIG
+// ===================================================================
+const DB_NAME = 'TradingJournalDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'images';
+const META_KEY = 'trading_journal_meta_v1';
+
+// ===================================================================
+//  STATE
+// ===================================================================
+let trades = [];
+let currentPhase = 1;
+let currentDirection = 'long';
+let currentImageType = 'entry';
+let imageBuffers = { entry: [], close: [], review: [] };
+let currentFilter = 'all';
+let currentSearch = '';
+let currentEditId = null;
+let db = null;
+let chartInstances = {};
+
+// ===================================================================
+//  IndexedDB — Image Storage
+// ===================================================================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (db) { resolve(db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const _db = e.target.result;
+      if (!_db.objectStoreNames.contains(STORE_NAME)) {
+        _db.createObjectStore(STORE_NAME, { keyPath: 'tradeId' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function saveImagesToDB(tradeId, images) {
+  const _db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    if (images && (images.entry.length || images.close.length || images.review.length)) {
+      store.put({ tradeId, entry: images.entry, close: images.close, review: images.review });
+    } else {
+      store.delete(tradeId);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = e => reject(e.target.error);
+  });
+}
+
+async function loadImagesFromDB(tradeId) {
+  const _db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(tradeId);
+    req.onsuccess = () => resolve(req.result || { entry: [], close: [], review: [] });
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function deleteImagesFromDB(tradeId) {
+  const _db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(tradeId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = e => reject(e.target.error);
+  });
+}
+
+async function loadAllImagesFromDB() {
+  const _db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const map = {};
+      (req.result || []).forEach(r => { map[r.tradeId] = r; });
+      resolve(map);
+    };
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function clearAllImagesFromDB() {
+  const _db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = e => reject(e.target.error);
+  });
+}
+
+// ===================================================================
+//  Trade Metadata — localStorage
+// ===================================================================
+function loadTrades() {
+  try {
+    const raw = localStorage.getItem(META_KEY);
+    trades = raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    trades = [];
+  }
+}
+
+function saveTrades() {
+  try {
+    localStorage.setItem(META_KEY, JSON.stringify(trades));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      showToast('存储空间不足，请清理旧数据');
+    }
+  }
+}
+
+// ===================================================================
+//  Image Processing
+// ===================================================================
+function pickImage(type) {
+  currentImageType = type;
+  document.getElementById('fileInput').click();
+}
+
+function handleImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > 800) { h = Math.round(h * 800 / w); w = 800; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      imageBuffers[currentImageType].push(canvas.toDataURL('image/jpeg', 0.7));
+      renderImagePreviews(currentImageType);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeImage(type, idx) {
+  imageBuffers[type].splice(idx, 1);
+  renderImagePreviews(type);
+}
+
+function renderImagePreviews(type) {
+  const c = document.getElementById(type + 'ImgPreview');
+  c.innerHTML = imageBuffers[type].map((src, i) =>
+    `<div class="img-preview"><img src="${src}" onclick="event.stopPropagation();showLightbox(this.src)"><div class="del" onclick="event.stopPropagation();removeImage('${type}',${i})">✕</div></div>`
+  ).join('');
+}
+
+function showLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ===================================================================
+//  Direction Toggle
+// ===================================================================
+function setDir(dir) {
+  currentDirection = dir;
+  document.getElementById('dirLong').className = 'dir-btn' + (dir === 'long' ? ' active-long' : '');
+  document.getElementById('dirShort').className = 'dir-btn' + (dir === 'short' ? ' active-short' : '');
+}
+
+// ===================================================================
+//  Phase Navigation
+// ===================================================================
+function switchPhase(n) { currentPhase = n; updatePhaseUI(); }
+function nextPhase() { if (currentPhase < 3) { currentPhase++; updatePhaseUI(); } else { saveTrade(); } }
+function prevPhase() { if (currentPhase > 1) { currentPhase--; updatePhaseUI(); } }
+
+function updatePhaseUI() {
+  document.querySelectorAll('.phase-step').forEach(el => {
+    const p = parseInt(el.dataset.phase);
+    el.className = 'phase-step' + (p === currentPhase ? ' active' : p < currentPhase ? ' done' : '');
+  });
+  document.querySelectorAll('.phase-section').forEach((el, i) => {
+    el.className = 'phase-section' + (i + 1 === currentPhase ? ' active' : '');
+  });
+  document.getElementById('prevPhaseBtn').style.display = currentPhase > 1 ? '' : 'none';
+  document.getElementById('nextPhaseBtn').textContent = currentPhase === 3 ? (currentEditId ? '保存修改' : '保存交易') : '下一步';
+}
+
+// ===================================================================
+//  Add / Edit Page
+// ===================================================================
+function showAddPage(editId) {
+  currentEditId = editId || null;
+  resetForm();
+  if (editId) {
+    populateForm(editId);
+    document.getElementById('formTitle').textContent = '编辑交易';
+  } else {
+    document.getElementById('formTitle').textContent = '新增交易';
+    document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('fOpenTime').value = new Date().toTimeString().slice(0, 5);
+  }
+  currentPhase = 1;
+  updatePhaseUI();
+  document.getElementById('addPage').classList.add('show');
+  window._lockedScroll = window.scrollY;
+  document.documentElement.classList.add('modal-open');
+  document.body.classList.add('modal-open');
+}
+
+function closeAddPage() {
+  document.getElementById('addPage').classList.remove('show');
+  document.documentElement.classList.remove('modal-open');
+  document.body.classList.remove('modal-open');
+  window.scrollTo(0, window._lockedScroll || 0);
+  resetForm();
+}
+
+function resetForm() {
+  document.getElementById('tradeForm').reset();
+  document.getElementById('editId').value = '';
+  currentDirection = 'long';
+  imageBuffers = { entry: [], close: [], review: [] };
+  ['entry', 'close', 'review'].forEach(t => { document.getElementById(t + 'ImgPreview').innerHTML = ''; });
+  setDir('long');
+  currentEditId = null;
+}
+
+async function populateForm(id) {
+  const t = trades.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('fDate').value = t.date || '';
+  document.getElementById('fOpenTime').value = t.openTime || '';
+  document.getElementById('fSymbol').value = t.symbol || '';
+  setDir(t.direction || 'long');
+  document.getElementById('fLots').value = t.lots || '';
+  document.getElementById('fOpenPrice').value = t.openPrice || '';
+  document.getElementById('fStopLoss').value = t.stopLoss || '';
+  document.getElementById('fTargetPrice').value = t.targetPrice || '';
+  document.getElementById('fRR').value = t.rr || '';
+  document.getElementById('fMarketStructure').value = t.marketStructure || '';
+  document.getElementById('fSignal').value = t.signal || '';
+  document.getElementById('fNotes').value = t.notes || '';
+  document.getElementById('fCloseTime').value = t.closeTime || '';
+  document.getElementById('fClosePrice').value = t.closePrice || '';
+  document.getElementById('fPnl').value = t.pnl !== undefined ? t.pnl : '';
+  document.getElementById('fCloseReason').value = t.closeReason || '';
+  document.getElementById('fDuration').value = t.duration || '';
+  document.getElementById('fWhatRight').value = t.whatRight || '';
+  document.getElementById('fWhatWrong').value = t.whatWrong || '';
+  document.getElementById('fIfRedo').value = t.ifRedo || '';
+  document.getElementById('fLesson').value = t.lesson || '';
+  if (t.emotion) { const r = document.querySelector(`input[name="emotion"][value="${t.emotion}"]`); if (r) r.checked = true; }
+  // Load images from IndexedDB
+  try {
+    const imgs = await loadImagesFromDB(id);
+    imageBuffers = { entry: imgs.entry || [], close: imgs.close || [], review: imgs.review || [] };
+  } catch(e) { imageBuffers = { entry: [], close: [], review: [] }; }
+  ['entry', 'close', 'review'].forEach(renderImagePreviews);
+}
+
+// ===================================================================
+//  Save Trade
+// ===================================================================
+async function saveTrade() {
+  const date = document.getElementById('fDate').value;
+  const symbol = document.getElementById('fSymbol').value.trim();
+  if (!date || !symbol) { showToast('请至少填写日期和品种名称'); switchPhase(1); return; }
+
+  const emotionEl = document.querySelector('input[name="emotion"]:checked');
+  const id = currentEditId || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  const trade = {
+    id, date,
+    openTime: document.getElementById('fOpenTime').value,
+    symbol,
+    direction: currentDirection,
+    lots: parseFloat(document.getElementById('fLots').value) || 0,
+    openPrice: parseFloat(document.getElementById('fOpenPrice').value) || 0,
+    stopLoss: parseFloat(document.getElementById('fStopLoss').value) || 0,
+    targetPrice: parseFloat(document.getElementById('fTargetPrice').value) || 0,
+    rr: parseFloat(document.getElementById('fRR').value) || 0,
+    marketStructure: document.getElementById('fMarketStructure').value.trim(),
+    signal: document.getElementById('fSignal').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+    closeTime: document.getElementById('fCloseTime').value,
+    closePrice: parseFloat(document.getElementById('fClosePrice').value) || 0,
+    pnl: parseFloat(document.getElementById('fPnl').value) || 0,
+    closeReason: document.getElementById('fCloseReason').value,
+    duration: document.getElementById('fDuration').value.trim(),
+    whatRight: document.getElementById('fWhatRight').value.trim(),
+    whatWrong: document.getElementById('fWhatWrong').value.trim(),
+    emotion: emotionEl ? emotionEl.value : '',
+    ifRedo: document.getElementById('fIfRedo').value.trim(),
+    lesson: document.getElementById('fLesson').value.trim(),
+    hasImages: !!(imageBuffers.entry.length || imageBuffers.close.length || imageBuffers.review.length),
+    createdAt: currentEditId ? (trades.find(x => x.id === currentEditId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    _synced: false
+  };
+
+  // Save metadata to localStorage
+  if (currentEditId) {
+    const idx = trades.findIndex(x => x.id === currentEditId);
+    if (idx >= 0) trades[idx] = trade;
+  } else {
+    trades.unshift(trade);
+  }
+  saveTrades();
+
+  // Save images to IndexedDB
+  try {
+    await saveImagesToDB(id, imageBuffers);
+  } catch(e) {
+    console.error('Failed to save images:', e);
+  }
+
+  closeAddPage();
+  refreshAll();
+  showToast(currentEditId ? '交易已更新' : '交易已保存');
+}
+
+// ===================================================================
+//  Trade Detail
+// ===================================================================
+async function showDetail(id) {
+  const t = trades.find(x => x.id === id);
+  if (!t) return;
+
+  document.getElementById('detailTitle').textContent = t.symbol;
+  document.getElementById('editBtn').onclick = () => { closeDetail(); showAddPage(id); };
+
+  const dirTag = t.direction === 'long' ? '<span class="trade-card-tag tag-long">做多</span>' : '<span class="trade-card-tag tag-short">做空</span>';
+  const pnlClass = t.pnl > 0 ? 'profit' : t.pnl < 0 ? 'loss' : '';
+  const pnlText = t.pnl > 0 ? '+' + t.pnl : t.pnl < 0 ? t.pnl.toString() : '-';
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+      <span style="font-size:1.125rem;font-weight:700">${esc(t.symbol)}</span>${dirTag}
+    </div>
+    <div class="pnl-badge ${pnlClass}" style="font-size:1rem;padding:0.375rem 0.875rem;margin-bottom:1rem">${pnlText}</div>
+    <div class="detail-section"><h3>📋 基础信息</h3>
+      <div class="detail-row"><span class="label">日期</span><span class="value">${t.date}</span></div>
+      <div class="detail-row"><span class="label">开仓时间</span><span class="value">${t.openTime||'-'}</span></div>
+      <div class="detail-row"><span class="label">手数</span><span class="value">${t.lots}</span></div>
+      <div class="detail-row"><span class="label">开仓价</span><span class="value">${t.openPrice}</span></div>
+      <div class="detail-row"><span class="label">止损价</span><span class="value">${t.stopLoss||'-'}</span></div>
+      <div class="detail-row"><span class="label">目标价</span><span class="value">${t.targetPrice||'-'}</span></div>
+      <div class="detail-row"><span class="label">盈亏比</span><span class="value">${t.rr||'-'}</span></div>
+    </div>`;
+
+  if (t.marketStructure || t.signal) {
+    html += `<div class="detail-section"><h3>🧠 交易逻辑</h3>`;
+    if (t.marketStructure) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.125rem">市场结构</div><div class="detail-text">${esc(t.marketStructure)}</div></div>`;
+    if (t.signal) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.125rem">触发信号</div><div class="detail-text">${esc(t.signal)}</div></div>`;
+    html += `</div>`;
+  }
+
+  // Load images from IndexedDB
+  let imgs = { entry: [], close: [], review: [] };
+  try { imgs = await loadImagesFromDB(id); } catch(e) {}
+  if (imgs.entry && imgs.entry.length) {
+    html += `<div class="detail-section"><h3>📸 入场截图</h3><div class="detail-images">${imgs.entry.map(s => `<img src="${s}" onclick="showLightbox(this.src)">`).join('')}</div></div>`;
+  }
+
+  if (t.closeTime || t.closePrice || t.pnl) {
+    html += `<div class="detail-section"><h3>📊 平仓信息</h3>
+      <div class="detail-row"><span class="label">平仓时间</span><span class="value">${t.closeTime||'-'}</span></div>
+      <div class="detail-row"><span class="label">平仓价</span><span class="value">${t.closePrice||'-'}</span></div>
+      <div class="detail-row"><span class="label">平仓原因</span><span class="value">${esc(t.closeReason||'-')}</span></div>
+      <div class="detail-row"><span class="label">持仓时长</span><span class="value">${esc(t.duration||'-')}</span></div>
+    </div>`;
+  }
+  if (imgs.close && imgs.close.length) {
+    html += `<div class="detail-section"><h3>📸 平仓截图</h3><div class="detail-images">${imgs.close.map(s => `<img src="${s}" onclick="showLightbox(this.src)">`).join('')}</div></div>`;
+  }
+
+  if (t.whatRight || t.whatWrong || t.emotion || t.ifRedo || t.lesson) {
+    html += `<div class="detail-section"><h3>🔍 交易复盘</h3>`;
+    if (t.whatRight) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--green);margin-bottom:0.125rem">✅ 做对了什么</div><div class="detail-text">${esc(t.whatRight)}</div></div>`;
+    if (t.whatWrong) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--red);margin-bottom:0.125rem">❌ 做错了什么</div><div class="detail-text">${esc(t.whatWrong)}</div></div>`;
+    if (t.emotion) html += `<div class="detail-row"><span class="label">情绪状态</span><span class="value">${esc(t.emotion)}</span></div>`;
+    if (t.ifRedo) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--accent);margin-bottom:0.125rem">🔄 重来会怎么改</div><div class="detail-text">${esc(t.ifRedo)}</div></div>`;
+    if (t.lesson) html += `<div style="margin-bottom:0.5rem"><div style="font-size:0.75rem;color:var(--purple);margin-bottom:0.125rem">💡 启示</div><div class="detail-text">${esc(t.lesson)}</div></div>`;
+    html += `</div>`;
+  }
+  if (imgs.review && imgs.review.length) {
+    html += `<div class="detail-section"><h3>📸 复盘截图</h3><div class="detail-images">${imgs.review.map(s => `<img src="${s}" onclick="showLightbox(this.src)">`).join('')}</div></div>`;
+  }
+  if (t.notes) {
+    html += `<div class="detail-section"><h3>📝 备注</h3><div class="detail-text">${esc(t.notes)}</div></div>`;
+  }
+  html += `<div class="btn-group" style="margin-top:1.25rem"><button class="btn btn-danger" onclick="deleteTrade('${t.id}')">删除交易</button></div>`;
+
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailModal').classList.add('show');
+  window._lockedScroll = window.scrollY;
+  document.documentElement.classList.add('modal-open');
+  document.body.classList.add('modal-open');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('show');
+  document.documentElement.classList.remove('modal-open');
+  document.body.classList.remove('modal-open');
+  window.scrollTo(0, window._lockedScroll || 0);
+}
+
+async function deleteTrade(id) {
+  if (!confirm('确定要删除这笔交易记录吗？')) return;
+  trades = trades.filter(x => x.id !== id);
+  saveTrades();
+  try { await deleteImagesFromDB(id); } catch(e) {}
+  closeDetail();
+  refreshAll();
+  showToast('已删除');
+}
+
+function esc(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ===================================================================
+//  Trade List
+// ===================================================================
+function getFilteredTrades() {
+  let list = [...trades];
+  if (currentFilter === 'long') list = list.filter(t => t.direction === 'long');
+  else if (currentFilter === 'short') list = list.filter(t => t.direction === 'short');
+  else if (currentFilter === 'profit') list = list.filter(t => t.pnl > 0);
+  else if (currentFilter === 'loss') list = list.filter(t => t.pnl < 0);
+  if (currentSearch) {
+    const q = currentSearch.toLowerCase();
+    list = list.filter(t =>
+      (t.symbol||'').toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q) ||
+      (t.lesson||'').toLowerCase().includes(q) || (t.marketStructure||'').toLowerCase().includes(q) || (t.signal||'').toLowerCase().includes(q)
+    );
+  }
+  return list;
+}
+
+function renderTradeList() {
+  const list = getFilteredTrades();
+  const c = document.getElementById('tradeList');
+  if (!list.length) {
+    if (!trades.length) {
+      c.innerHTML = `<div class="empty-state"><div class="icon">📝</div><p>还没有交易记录</p><button class="btn btn-primary" onclick="showAddPage()" style="width:auto;display:inline-flex;padding:0.75rem 1.5rem">＋ 记录第一笔交易</button></div>`;
+    } else {
+      c.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>没有匹配的交易</p></div>`;
+    }
+    return;
+  }
+  c.innerHTML = list.map(t => {
+    const d = t.direction === 'long' ? '<span class="trade-card-tag tag-long">多</span>' : '<span class="trade-card-tag tag-short">空</span>';
+    const pc = t.pnl > 0 ? 'profit' : t.pnl < 0 ? 'loss' : '';
+    const pt = t.pnl > 0 ? '+'+t.pnl : t.pnl < 0 ? t.pnl.toString() : '-';
+    return `<div class="trade-card" onclick="showDetail('${t.id}')">
+      <div class="trade-card-header"><div style="display:flex;align-items:center;gap:0.375rem"><span class="trade-card-symbol">${esc(t.symbol)}</span>${d}</div><span class="trade-card-pnl ${pc}">${pt}</span></div>
+      <div class="trade-card-meta"><span>${t.date} ${t.openTime||''}</span><span>${t.hasImages?'📷':''}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecentTrades() {
+  const c = document.getElementById('recentTrades');
+  const recent = trades.slice(0, 5);
+  if (!recent.length) { c.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.25rem;font-size:0.8125rem">暂无记录</div>'; return; }
+  c.innerHTML = recent.map(t => {
+    const d = t.direction === 'long' ? '<span class="trade-card-tag tag-long">多</span>' : '<span class="trade-card-tag tag-short">空</span>';
+    const pc = t.pnl > 0 ? 'profit' : t.pnl < 0 ? 'loss' : '';
+    const pt = t.pnl > 0 ? '+'+t.pnl : t.pnl < 0 ? t.pnl.toString() : '-';
+    return `<div class="trade-card" onclick="showDetail('${t.id}')">
+      <div class="trade-card-header"><div style="display:flex;align-items:center;gap:0.375rem"><span class="trade-card-symbol">${esc(t.symbol)}</span>${d}</div><span class="trade-card-pnl ${pc}">${pt}</span></div>
+      <div class="trade-card-meta"><span>${t.date}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ===================================================================
+//  Statistics
+// ===================================================================
+function updateStats() {
+  const total = trades.length;
+  const wins = trades.filter(t => t.pnl > 0);
+  const losses = trades.filter(t => t.pnl < 0);
+  const totalPnl = trades.reduce((s, t) => s + (t.pnl || 0), 0);
+  const winRate = total > 0 ? (wins.length / total * 100).toFixed(1) : 0;
+  const rrTrades = trades.filter(t => t.rr > 0);
+  const avgRR = rrTrades.length > 0 ? (rrTrades.reduce((s, t) => s + t.rr, 0) / rrTrades.length).toFixed(1) : '0';
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statWinRate').textContent = winRate + '%';
+  document.getElementById('statWinRate').className = 'stat-value ' + (winRate > 50 ? 'profit' : winRate < 50 ? 'loss' : 'neutral');
+  document.getElementById('statTotalPnl').textContent = totalPnl > 0 ? '+' + totalPnl : totalPnl;
+  document.getElementById('statTotalPnl').className = 'stat-value ' + (totalPnl > 0 ? 'profit' : totalPnl < 0 ? 'loss' : 'neutral');
+  document.getElementById('statAvgRR').textContent = avgRR + ':1';
+  document.getElementById('statWinCount').textContent = wins.length;
+  document.getElementById('statLossCount').textContent = losses.length;
+  document.getElementById('statMaxWin').textContent = wins.length ? '+' + Math.max(...wins.map(t => t.pnl)) : '0';
+  document.getElementById('statMaxLoss').textContent = losses.length ? Math.min(...losses.map(t => t.pnl)) : '0';
+}
+
+// ===================================================================
+//  Charts — Light theme palette for Chart.js
+//  Chinese convention: red=profit/bullish, green=loss/bearish
+// ===================================================================
+const CHART_RED = 'rgba(180,55,50,0.6)';
+const CHART_GREEN = 'rgba(42,171,88,0.6)';
+const CHART_RED_SOLID = 'rgb(180,55,50)';
+const CHART_GREEN_SOLID = 'rgb(42,171,88)';
+const CHART_FLAT = 'rgba(100,100,120,0.5)';
+const CHART_ACCENT = 'rgba(102,130,230,0.5)';
+const CHART_GRID = 'oklch(0.92 0.005 90 / 0.6)';
+const CHART_LABEL = '#424a5c';
+
+const cDef = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { labels: { color: CHART_LABEL, font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#8a8fa0', font: { size: 10 } }, grid: { color: CHART_GRID } },
+    y: { ticks: { color: '#8a8fa0', font: { size: 10 } }, grid: { color: CHART_GRID } }
+  }
+};
+
+function destroyChart(key) { if (chartInstances[key]) { chartInstances[key].destroy(); chartInstances[key] = null; } }
+
+function renderDashboardChart() {
+  const sorted = [...trades].sort((a, b) => (a.date+(a.openTime||'')).localeCompare(b.date+(b.openTime||'')));
+  let cum = 0;
+  const labels = [], data = [];
+  sorted.forEach(t => { cum += (t.pnl||0); labels.push(t.date.slice(5)); data.push(cum); });
+  destroyChart('dash');
+  chartInstances.dash = new Chart(document.getElementById('dashboardChart').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: '累计盈亏', data, borderColor: CHART_ACCENT.replace('0.5','1'), backgroundColor: CHART_ACCENT, fill: true, tension: 0.3, pointRadius: data.length < 20 ? 4 : 2, borderWidth: 2 }] },
+    options: { ...cDef, plugins: { ...cDef.plugins, legend: { display: false } } }
+  });
+}
+
+function renderWinLossChart() {
+  const wins = trades.filter(t => t.pnl > 0).length, losses = trades.filter(t => t.pnl < 0).length, flat = trades.filter(t => t.pnl === 0).length;
+  destroyChart('wl');
+  chartInstances.wl = new Chart(document.getElementById('winLossChart').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: ['盈利','亏损','持平'], datasets: [{ data: [wins,losses,flat], backgroundColor: ['rgba(180,55,50,0.7)','rgba(42,171,88,0.7)',CHART_FLAT], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: CHART_LABEL, font: { size: 12 }, padding: 16 } } } }
+  });
+}
+
+function renderPnlDistChart() {
+  const pnls = trades.map(t => t.pnl||0).filter(v => v !== 0);
+  if (pnls.length < 2) return;
+  const min = Math.min(...pnls), max = Math.max(...pnls), range = max-min||1;
+  const bc = Math.min(10, Math.max(5, Math.ceil(Math.sqrt(pnls.length))));
+  const bs = range / bc;
+  const buckets = Array(bc).fill(0), labels = [];
+  for (let i = 0; i < bc; i++) {
+    const lo = min + i*bs, hi = lo+bs;
+    labels.push(lo.toFixed(0)+'~'+hi.toFixed(0));
+    pnls.forEach(v => { if (i===bc-1 ? v>=lo&&v<=hi : v>=lo&&v<hi) buckets[i]++; });
+  }
+  destroyChart('pdist');
+  chartInstances.pdist = new Chart(document.getElementById('pnlDistChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: '笔数', data: buckets, backgroundColor: labels.map((_,i) => (min+(i+0.5)*bs)>=0 ? CHART_RED : CHART_GREEN), borderRadius: 4 }] },
+    options: { ...cDef, plugins: { ...cDef.plugins, legend: { display: false } } }
+  });
+}
+
+function renderDailyPnlChart() {
+  const dp = {};
+  trades.forEach(t => { dp[t.date] = (dp[t.date]||0)+(t.pnl||0); });
+  const dates = Object.keys(dp).sort(), data = dates.map(d => dp[d]);
+  destroyChart('daily');
+  chartInstances.daily = new Chart(document.getElementById('dailyPnlChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: dates.map(d => d.slice(5)), datasets: [{ label: '每日盈亏', data, backgroundColor: data.map(v => v>=0?CHART_RED:CHART_GREEN), borderRadius: 4 }] },
+    options: { ...cDef, plugins: { ...cDef.plugins, legend: { display: false } } }
+  });
+}
+
+function renderTimeChart() {
+  const hc = Array(24).fill(0), hp = Array(24).fill(0);
+  trades.forEach(t => { if (t.openTime) { const h = parseInt(t.openTime.split(':')[0]); if (!isNaN(h)&&h>=0&&h<24) { hc[h]++; hp[h]+=(t.pnl||0); } } });
+  const ah=[], ac=[], ap=[];
+  for (let i=0;i<24;i++) { if (hc[i]>0) { ah.push(i+':00'); ac.push(hc[i]); ap.push(hp[i]); } }
+  if (!ah.length) return;
+  destroyChart('time');
+  chartInstances.time = new Chart(document.getElementById('timeChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ah, datasets: [{ label: '笔数', data: ac, backgroundColor: CHART_ACCENT, borderRadius: 4, yAxisID: 'y' }, { label: '盈亏', data: ap, type: 'line', borderColor: 'oklch(0.72 0.16 60)', tension: 0.3, yAxisID: 'y1' }] },
+    options: { ...cDef, scales: { ...cDef.scales, y: { ...cDef.scales.y, position: 'left' }, y1: { ...cDef.scales.y, position: 'right', grid: { display: false } } } }
+  });
+}
+
+function renderAllCharts() { renderWinLossChart(); renderPnlDistChart(); renderDailyPnlChart(); renderTimeChart(); }
+
+// ===================================================================
+//  Export / Import (both localStorage + IndexedDB)
+// ===================================================================
+async function exportAllData() {
+  showLoading(true);
+  try {
+    const allImages = await loadAllImagesFromDB();
+    const exportObj = { version: 1, exportDate: new Date().toISOString(), trades, images: allImages };
+    const blob = new Blob([JSON.stringify(exportObj)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `交易日志_备份_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('导出成功（含截图）');
+  } catch(e) {
+    showToast('导出失败：' + e.message);
+  }
+  showLoading(false);
+}
+
+function importData() { document.getElementById('importInput').click(); }
+
+async function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showLoading(true);
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported.trades || !Array.isArray(imported.trades)) throw new Error('Invalid');
+      const replace = !confirm(`将导入 ${imported.trades.length} 条记录。\n\n确定 → 合并（保留现有）\n取消 → 替换所有数据`);
+      if (replace) {
+        trades = imported.trades;
+      } else {
+        const existIds = new Set(trades.map(t => t.id));
+        imported.trades.forEach(t => { if (!existIds.has(t.id)) trades.push(t); });
+      }
+      trades.sort((a, b) => (b.date+(b.openTime||'')).localeCompare(a.date+(a.openTime||'')));
+      saveTrades();
+      // Import images
+      if (imported.images) {
+        for (const [tradeId, imgs] of Object.entries(imported.images)) {
+          await saveImagesToDB(tradeId, imgs);
+        }
+      }
+      refreshAll();
+      showToast(`成功导入 ${imported.trades.length} 条记录`);
+    } catch(err) {
+      showToast('导入失败：文件格式不正确');
+    }
+    showLoading(false);
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function clearAllData() {
+  if (!confirm('确定要清除所有交易记录吗？此操作不可恢复！')) return;
+  if (!confirm('真的确定吗？建议先导出备份！')) return;
+  trades = [];
+  saveTrades();
+  await clearAllImagesFromDB();
+  refreshAll();
+  showToast('所有数据已清除');
+}
+
+async function updateStorageInfo() {
+  const metaSize = new Blob([localStorage.getItem(META_KEY)||'']).size;
+  let imgCount = 0, estSize = 0;
+  try {
+    const allImgs = await loadAllImagesFromDB();
+    const keys = Object.keys(allImgs);
+    imgCount = keys.length;
+    estSize = new Blob([JSON.stringify(allImgs)]).size;
+  } catch(e) {}
+  const totalKB = ((metaSize + estSize) / 1024).toFixed(1);
+  const imgMB = (estSize / 1048576).toFixed(1);
+  document.getElementById('storageInfo').textContent = `交易记录：${(metaSize/1024).toFixed(1)}KB | 截图：${imgMB}MB（${imgCount}笔）| 总计：${totalKB}KB`;
+  document.getElementById('exportInfo').textContent = `${trades.length}条记录 + 截图 → JSON文件`;
+}
+
+// ===================================================================
+//  Navigation
+// ===================================================================
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelector(`.tab[data-page="${page}"]`).classList.add('active');
+  if (page === 'charts') setTimeout(renderAllCharts, 100);
+  if (page === 'settings') updateStorageInfo();
+  // Show/hide FAB on trades page only
+  document.getElementById('fab').style.display = page === 'trades' ? 'flex' : 'none';
+}
+
+function refreshAll() { updateStats(); renderRecentTrades(); renderTradeList(); renderDashboardChart(); }
+
+// ===================================================================
+//  Event Listeners
+// ===================================================================
+document.getElementById('filterBar').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  currentFilter = chip.dataset.filter;
+  renderTradeList();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => { currentSearch = e.target.value.trim(); renderTradeList(); });
+document.getElementById('mainTabs').addEventListener('click', e => { const tab = e.target.closest('.tab'); if (tab) switchPage(tab.dataset.page); });
+
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+function showLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
+
+// ===================================================================
+//  iOS scroll lock — background locked, modal scrolls vertically only
+// ===================================================================
+(function() {
+  let startX = 0, startY = 0, locked = false;
+  document.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    locked = false;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    if (!document.body.classList.contains('modal-open')) return;
+    if (!locked) {
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > 5) locked = true;
+    }
+    if (locked) { e.preventDefault(); return; }
+    if (!e.target.closest('.modal')) { e.preventDefault(); return; }
+  }, { passive: false });
+})();
+
+// ===================================================================
+//  AUTO-SYNC CONFIG (v2 — 支持图片同步 + 自动清理)
+// ===================================================================
+const SERVER_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? null
+  : window.location.origin;
+
+let serverOnline = false;
+let lastSyncTime = 0;
+const SYNC_CHECK_INTERVAL = 30000;
+
+// ===================================================================
+//  NETWORK DETECTION
+// ===================================================================
+async function checkServer() {
+  try {
+    let url = SERVER_URL;
+    if (!url) {
+      try {
+        const resp = await fetch('http://localhost:8899/api/status', {
+          method: 'GET', signal: AbortSignal.timeout(2000)
+        });
+        if (resp.ok) { serverOnline = true; updateStatusUI(); return; }
+      } catch(e) {}
+      serverOnline = false;
+      updateStatusUI();
+      return;
+    }
+    const resp = await fetch(url + '/api/status', {
+      method: 'GET', signal: AbortSignal.timeout(3000)
+    });
+    serverOnline = resp.ok;
+  } catch(e) {
+    serverOnline = false;
+  }
+  updateStatusUI();
+}
+
+function updateStatusUI() {
+  const el = document.getElementById('syncStatus');
+  const statusText = document.getElementById('serverStatusText');
+  if (serverOnline) {
+    if (el) { el.textContent = '🟢 已连接'; el.style.color = 'var(--green)'; }
+    if (statusText) statusText.textContent = '已连接到服务器';
+  } else {
+    if (el) { el.textContent = '⚫ 离线'; el.style.color = 'var(--text-muted)'; }
+    if (statusText) statusText.textContent = '未连接服务器，数据暂存手机本地';
+  }
+}
+
+// ===================================================================
+//  SYNC: PUSH (手机 → 服务器)
+// ===================================================================
+async function syncToServer() {
+  if (!serverOnline || !SERVER_URL) return false;
+  try {
+    const localTrades = JSON.parse(localStorage.getItem(META_KEY) || '[]');
+    if (localTrades.length === 0) return true;
+
+    const allImages = await loadAllImagesFromDB();
+    const tradesWithImages = localTrades.map(t => {
+      const copy = { ...t };
+      if (allImages[t.id]) {
+        copy.entryImages = allImages[t.id].entry || [];
+        copy.closeImages = allImages[t.id].close || [];
+        copy.reviewImages = allImages[t.id].review || [];
+      } else {
+        copy.entryImages = [];
+        copy.closeImages = [];
+        copy.reviewImages = [];
+      }
+      return copy;
+    });
+
+    const resp = await fetch(SERVER_URL + '/api/trades', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trades: tradesWithImages }),
+      signal: AbortSignal.timeout(30000)
+    });
+
+    if (!resp.ok) return false;
+    const result = await resp.json();
+    if (!result.ok) return false;
+
+    localTrades.forEach(t => { t._synced = true; });
+    localStorage.setItem(META_KEY, JSON.stringify(localTrades));
+
+    lastSyncTime = Date.now();
+    const imgText = result.images > 0 ? `，${result.images}张图片` : '';
+    showToast(`同步完成：新增${result.new}笔，更新${result.updated}笔${imgText}`);
+    return true;
+  } catch(e) {
+    console.error('Sync push failed:', e);
+    return false;
+  }
+}
+
+// ===================================================================
+//  SYNC: PULL (服务器 → 手机)
+// ===================================================================
+async function pullFromServer() {
+  if (!serverOnline || !SERVER_URL) return false;
+  try {
+    const resp = await fetch(SERVER_URL + '/api/trades', {
+      method: 'GET',
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    if (!data.trades) return false;
+
+    for (const t of data.trades) {
+      const imgs = {
+        entry: t.entryImages || [],
+        close: t.closeImages || [],
+        review: t.reviewImages || []
+      };
+      try { await saveImagesToDB(t.id, imgs); } catch(e) { console.error('Image save error:', e); }
+      delete t.entryImages;
+      delete t.closeImages;
+      delete t.reviewImages;
+      t._synced = true;
+    }
+
+    localStorage.setItem(META_KEY, JSON.stringify(data.trades));
+    trades = data.trades;
+    return true;
+  } catch(e) {
+    console.error('Sync pull failed:', e);
+    return false;
+  }
+}
+
+// ===================================================================
+//  FULL SYNC: 先推后拉
+// ===================================================================
+async function fullSync() {
+  if (!serverOnline || !SERVER_URL) {
+    showToast('未连接服务器，数据暂存本地');
+    return;
+  }
+  const pushOk = await syncToServer();
+  if (pushOk) {
+    await pullFromServer();
+    refreshAll();
+  }
+}
+
+// ===================================================================
+//  AUTO-CLEANUP
+// ===================================================================
+async function autoCleanupAfterSync() {
+  const localTrades = JSON.parse(localStorage.getItem(META_KEY) || '[]');
+  const synced = localTrades.filter(t => t._synced);
+  const unsynced = localTrades.filter(t => !t._synced);
+
+  if (synced.length === 0) return;
+
+  for (const t of synced) {
+    try { await deleteImagesFromDB(t.id); } catch(e) {}
+  }
+
+  localStorage.setItem(META_KEY, JSON.stringify(unsynced));
+  trades = unsynced;
+
+  showToast(`已自动清理${synced.length}条已同步数据`);
+}
+
+async function cleanupSyncedData() {
+  await autoCleanupAfterSync();
+  refreshAll();
+}
+
+// ===================================================================
+//  AUTO-SYNC ON LOAD
+// ===================================================================
+async function autoSyncOnInit() {
+  await checkServer();
+  if (serverOnline && SERVER_URL) {
+    await fullSync();
+    await autoCleanupAfterSync();
+    refreshAll();
+  }
+}
+
+setInterval(async () => {
+  const wasOnline = serverOnline;
+  await checkServer();
+  if (!wasOnline && serverOnline && SERVER_URL) {
+    await fullSync();
+    await autoCleanupAfterSync();
+    refreshAll();
+  }
+}, SYNC_CHECK_INTERVAL);
+
+// ===================================================================
+//  INIT
+// ===================================================================
+loadTrades();
+refreshAll();
+autoSyncOnInit();
+</script>
+</body>
+</html>
